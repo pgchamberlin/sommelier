@@ -1,9 +1,18 @@
 Models
 
 wine
-  region
-  sub_region
-  grape_variety
+  region ..1
+  sub_region ..1
+  grape_variety ..1
   sparkling
   colour
+
+note
+  wine ..1
+  text
+  score
+
+wine_descriptor
+  wine ..1
+  descriptor ..1
 

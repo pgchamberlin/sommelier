@@ -1,0 +1,8 @@
+Burke (2002) 'Hybrid Recommender Systems: Survey and Experiments' User Modeling and User-Adapted Interaction, Volume 12 Issue 4, November 2002, Pages 331 - 370. Kluwer Academic Publishers: Hingham, MA, USA
+
+Resnick, P., Iacovou, N., Suchak, M., Bergstrom, P. and Riedl, J.: 1994, ‘GroupLens: An Open Architecture for
+Collaborative Filtering of Netnews’. In: Proceedings of the Conference on Computer Supported Cooperative Work,
+Chapel Hill, NC, pp. 175-186.
+
+Resnick, P. and Varian, H. R.: 1997, ‘Recommender Systems’. Communications of the ACM, 40 (3), 56-58.
+
