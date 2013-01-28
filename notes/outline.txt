@@ -1,0 +1,18 @@
+Abstract
+Introduction
+Recommender Systems
+  CF
+  CBF
+Wine Recommendations
+Technology
+  Python
+    scipy
+    nltk
+    flask
+  PostgreSQL
+Methodology
+Project report
+Evaluation and Reflection
+Conclusion
+Recommendations for Future Work
+

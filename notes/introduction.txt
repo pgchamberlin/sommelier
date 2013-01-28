@@ -1,0 +1,18 @@
+What is a recommender system?
+
+What is a social recommender system?
+
+Why are these systems interesting
+ - Challenges
+ - Benefits
+
+Typical applications...
+
+Wine recommendation domain
+ - what's the same
+ - what's different
+
+What will this project do?
+ - implement a recommender system for wines
+ - exploration of techniques etc.
+
