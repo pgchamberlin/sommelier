@@ -9,8 +9,14 @@ wine
 
 note
   wine ..1
+  author ..1
   text
   score
+
+author
+  id
+  name
+  status
 
 wine_descriptor
   wine ..1

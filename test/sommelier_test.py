@@ -1,17 +1,23 @@
 import unittest
+import pprint
 import scipy.stats.stats
 
 class TestSommelier(unittest.TestCase):
 
   def setUp(self):
-    self.people = ['bruce','carl','derek']
-    self.people['bruce'] = [1,2,3,4]
-    self.people['carl']  = [2,3,4,5]
-    self.people['derek'] = [4,0,9,1]
+    self.people = [
+      [1,2,3,4],
+      [2,3,4,5],
+      [1,3,0,2]
+    ]
   
   def test_name(self):
-    scipy.stats.pearsonr(self.people['bruce'],self.people['carl']);
-    self.assertEqual(self.name, 'sommelier')
+    self.pearsonr = [
+      scipy.stats.pearsonr(self.people[0],self.people[1]),
+      scipy.stats.pearsonr(self.people[0],self.people[2]),
+    ]
+    self.assertEqual(self.pearsonr[0][0], 1)
+    self.assertEqual(self.pearsonr[1][0], 0)
   
 if __name__ == '__main__':
   unittest.main()
