@@ -26,3 +26,7 @@ Now we can install MySQLdb
     CREATE USER 'sommelier'@'localhost' IDENTIFIED BY 'vinorosso';
     GRANT ALL ON wine.* TO 'sommelier'@'localhost';
 
+## MySQLdb docs
+
+Documentation on working with MySQLdb is at: http://mysql-python.sourceforge.net/MySQLdb.html
+
