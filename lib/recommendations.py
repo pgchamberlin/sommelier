@@ -122,3 +122,97 @@ def topMatches(prefs,person,n=5,similarity=sim_pearson):
   scores.reverse()
   return scores[0:n]
 
+# Method copied from Segaran: Collective Intelligence (2006) Ch.2
+# Gets recommendations for a person by using weighted average
+# of every other user's rankings
+def getRecommendations(prefs,person,similarity=sim_pearson):
+  totals={}
+  simSums={}
+  for other in prefs:
+    if other==person: continue
+    sim=similarity(prefs,person,other)
+
+    if sim<=0: continue
+    for item in prefs[other]:
+
+      # only score movies 'person' hasn't seen
+      if item not in prefs[person] or prefs[person][item]==0:
+        # similarity*score
+        totals.setdefault(item,0)
+        totals[item]+=prefs[other][item]*sim
+
+        # sum of similarities
+        simSums.setdefault(item,0)
+        simSums[item]+=sim
+
+  rankings=[(total/simSums[item],item) for item,total in totals.items()]
+
+  rankings.sort()
+  rankings.reverse()
+  return rankings
+
+# Method copied from Segaran: Collective Intelligence (2006) Ch.2
+def transformPrefs(prefs):
+  result={}
+  for person in prefs:
+    for item in prefs[person]:
+      result.setdefault(item,{})
+      result[item][person]=prefs[person][item]
+  return result
+
+# Method copied from Segaran: Collective Intelligence (2006) Ch.2
+def calculateSimilarItems(prefs,n=10):
+  result={}
+
+  itemPrefs=transformPrefs(prefs)
+  c=0
+  for item in itemPrefs:
+    c+=1
+    if c%100==0: print "%d / %d" % (c,len(itemPrefs))
+    
+    scores=topMatches(itemPrefs,item,n=n,similarity=sim_distance)
+    result[item]=scores
+
+  return result
+
+# Method copied from Segaran: Collective Intelligence (2006) Ch.2
+def getRecommendedItems(prefs,itemMatch,user):
+  userRatings=prefs[user]
+  scores={}
+  totalSim={}
+
+  for (item,rating) in userRatings.items():
+    for (similarity, item2) in itemMatch[item]:
+      if item2 in userRatings: continue
+
+      # Weighted sum of rating times similarity
+      scores.setdefault(item2,0)
+      scores[item2]+=similarity*rating
+
+      # Sum of all the similarities
+      totalSim.setdefault(item2,0)
+      totalSim[item2]+=similarity
+
+  # Divide each total score by total weighting to give an average
+  rankings=[(score/totalSim[item],item) for item,score in scores.items()]
+
+  rankings.sort()
+  rankings.reverse()
+  return rankings
+
+# Method copied from Segaran: Collective Intelligence (2006) Ch.2
+def loadMovieLens(path='../data/ml-100k'):
+
+  movies={}
+  for line in open(path+'/u.item'):
+    (id,title)=line.split('|')[0:2]
+    movies[id]=title
+
+  prefs={}
+  for line in open(path+'/u.data'):
+    (user,movieid,rating,ts)=line.split('\t')
+    prefs.setdefault(user,{})
+    prefs[user][movies[movieid]]=float(rating)
+
+  return prefs
+
