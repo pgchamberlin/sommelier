@@ -4,15 +4,52 @@ Modification of tasting notes database
 
     update tasting set author = 'Christelle Guibert' where author = 'C hristelle Guibert';
 
-    update tasting set author = '' where author in ('Rising stars','New releases','Great wine buys','Panel Tasting','Hot tip','Wine of the month','Wine of the week','Connoisseur\'s choice','Decanter choice','Decanter Fine Wine Encounter 2002','In the Decanter tasting room','Christmas choice','') or author is NULL;
+    update tasting set author = '' 
+      where author in (
+        'Rising stars',
+        'New releases',
+        'Great wine buys',
+        'Panel Tasting',
+        'Hot tip',
+        'Wine of the month',
+        'Wine of the week',
+        'Connoisseur\'s choice',
+        'Decanter choice',
+        'Decanter Fine Wine Encounter 2002',
+        'In the Decanter tasting room',
+        'Christmas choice',
+        ''
+      )
+      or author is NULL;
 
-Select count of wines tasted by each taster in author column of \`tasting\`:
 
 Number of tasting notes with date: 15006
 
 Number of tasting notes without date (0000-00-00 00:00:00): 24595
 
-    mysql> select t.author, count(*) from tasting as t join wine as w on t.wine_id = w.id where author is not NULL and author <> '' and author not in ('Rising stars','New releases','Great wine buys','Panel Tasting','Hot tip','Wine of the month','Wine of the week','Connoisseur\'s choice','Decanter choice','Decanter Fine Wine Encounter 2002','In the Decanter tasting room','Christmas choice') group by t.author;
+Select count of wines tasted by each taster in author column of \`tasting\`:
+
+    select t.author, count(*) 
+    from tasting as t 
+    join wine as w on t.wine_id = w.id 
+    where author is not NULL 
+      and author <> '' 
+      and author not in (
+        'Rising stars',
+        'New releases',
+        'Great wine buys',
+        'Panel Tasting',
+        'Hot tip',
+        'Wine of the month',
+        'Wine of the week',
+        'Connoisseur\'s choice',
+        'Decanter choice',
+        'Decanter Fine Wine Encounter 2002',
+        'In the Decanter tasting room',
+        'Christmas choice'
+      ) 
+      group by t.author;
+
     +----------------------+----------+
     | author               | count(*) |
     +----------------------+----------+
@@ -38,7 +75,30 @@ Number of tasting notes without date (0000-00-00 00:00:00): 24595
     +----------------------+----------+
     19 rows in set (0.03 sec)
 
-    Investigation of prices in tasting notes:
+Investigation of prices in tasting notes:
 
-    select price from tasting where price not like '£%' and price not like '$%' and price != '' and price is not null and price not like 'n/a%' and price not like 'POA' and price not like '%TBC%' and price not like 'na%' and price not like 'Nicholas' and price not like '%old out%' and price not like 'n./a%' and price not like 'tcb%' and price not like 'n/ a%' and price not like '%request%' and price not like '%poa%' and price not like '%Howard Ripley%' and price not like '%N\'/A%' and price not like 'N/A' and price not like '%ut of%' and price not like '%tba%' and price not like '%trade%' and price not like '%undefined%' and price not like '%unreleased%';
+    select price from tasting 
+    where price not like '£%' 
+      and price not like '$%' 
+      and price != '' 
+      and price is not null 
+      and price not like 'n/a%' 
+      and price not like 'POA' 
+      and price not like '%TBC%' 
+      and price not like 'na%' 
+      and price not like 'Nicholas' 
+      and price not like '%old out%' 
+      and price not like 'n./a%' 
+      and price not like 'tcb%' 
+      and price not like 'n/ a%' 
+      and price not like '%request%' 
+      and price not like '%poa%' 
+      and price not like '%Howard Ripley%' 
+      and price not like '%N\'/A%' 
+      and price not like 'N/A' 
+      and price not like '%ut of%' 
+      and price not like '%tba%' 
+      and price not like '%trade%' 
+      and price not like '%undefined%' 
+      and price not like '%unreleased%';
 
