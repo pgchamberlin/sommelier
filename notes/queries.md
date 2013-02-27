@@ -2,16 +2,16 @@
 
 Modification of tasting notes database
 
-update tasting set author = 'Christelle Guibert' where author = 'C hristelle Guibert';
+    update tasting set author = 'Christelle Guibert' where author = 'C hristelle Guibert';
 
-update tasting set author = '' where author in ('Rising stars','New releases','Great wine buys','Panel Tasting','Hot tip','Wine of the month','Wine of the week','Connoisseur\'s choice','Decanter choice','Decanter Fine Wine Encounter 2002','In the Decanter tasting room','Christmas choice','') or author is NULL;
+    update tasting set author = '' where author in ('Rising stars','New releases','Great wine buys','Panel Tasting','Hot tip','Wine of the month','Wine of the week','Connoisseur\'s choice','Decanter choice','Decanter Fine Wine Encounter 2002','In the Decanter tasting room','Christmas choice','') or author is NULL;
 
-Select count of wines tasted by each taster in author column of `tasting`:
+Select count of wines tasted by each taster in author column of \`tasting\`:
 
 Tasting dates:
 
-      With date: 15006
-      0000-00-00 00:00:00: 24595
+With date: 15006
+0000-00-00 00:00:00: 24595
 
     mysql> select t.author, count(*) from tasting as t join wine as w on t.wine_id = w.id where author is not NULL and author <> '' and author not in ('Rising stars','New releases','Great wine buys','Panel Tasting','Hot tip','Wine of the month','Wine of the week','Connoisseur\'s choice','Decanter choice','Decanter Fine Wine Encounter 2002','In the Decanter tasting room','Christmas choice') group by t.author;
     +----------------------+----------+
