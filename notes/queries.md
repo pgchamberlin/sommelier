@@ -31,7 +31,6 @@ Select count of wines tasted by each taster in author column of \`tasting\`:
 
     select t.author, count(*) 
     from tasting as t 
-    join wine as w on t.wine_id = w.id 
     where author is not NULL 
       and author <> '' 
       and author not in (
@@ -175,4 +174,105 @@ Query for eligible wines:
     from 
       denormalised_quick_search_data w 
     join tasting as t on w.id = t.wine_id 
+
+Create sommelier_wine table:
+
+    CREATE TABLE sommelier_wine 
+    SELECT 
+      w.id, 
+      w.name, 
+      w.vintage, 
+      w.grape_variety as sommelier_grape_variety_id, 
+      w.appellation_id as sommelier_appelation_id, 
+      w.sub_region_id as sommelier_sub_region_id, 
+      w.region_id as sommelier_region_id, 
+      w.country_id as sommelier_country_id, 
+      w.producer_id as sommelier_producer_id,
+      w.wine_type_id as sommelier_type_id, 
+      w.sub_type_id as sommelier_style_id, 
+      w.colour_id as sommelier_colour_id 
+    FROM denormalised_quick_search_data w
+    INNER JOIN tasting t ON w.id = t.wine_id 
+    WHERE (t.notes <> '' OR t.rating > 0)
+
+Create auxiliary tables:
+
+    CREATE TABLE sommelier_grape_variety 
+    SELECT * 
+    FROM wine_grape_variety
+
+    CREATE TABLE sommelier_appellation 
+    SELECT id, appellation 
+    FROM appellation
+
+    CREATE TABLE sommelier_sub_region 
+    SELECT id, sub_region 
+    FROM sub_region;
+
+    CREATE TABLE sommelier_region 
+    SELECT id, region 
+    FROM region
+
+    CREATE TABLE sommelier_country 
+    SELECT id, country 
+    FROM country
+
+    CREATE TABLE sommelier_producer 
+    SELECT id, producer_match AS producer
+    FROM producers
+
+    CREATE TABLE sommelier_type 
+    SELECT id, description AS type 
+    FROM wine_type;
+
+    CREATE TABLE sommelier_style 
+    SELECT id, description AS style 
+    FROM wine_sub_type;
+
+    CREATE TABLE sommelier_colour 
+    SELECT id, description AS colour
+    FROM wine_colour 
+
+Wine data completeness...
+
+    SELECT COUNT(*) FROM sommelier WHERE (grape_variety IS NULL OR appellation IS NULL OR sub_region IS NULL OR region IS NULL OR country IS NULL OR producer IS NULL OR type IS NULL OR style IS NULL OR colour IS NULL);
+    +----------+
+    | COUNT(*) |
+    +----------+
+    |    21516 |
+    +----------+
+    1 row in set (0.04 sec)
+
+
+    SELECT COUNT(*) FROM sommelier WHERE (grape_variety IS NULL OR appellation IS NULL OR sub_region IS NULL OR region IS NULL OR country IS NULL OR producer IS NULL);
+    +----------+
+    | COUNT(*) |
+    +----------+
+    |    14830 |
+    +----------+
+    1 row in set (0.00 sec)
+
+    SELECT COUNT(*) FROM sommelier WHERE (grape_variety IS NULL OR appellation IS NULL);
+    +----------+
+    | COUNT(*) |
+    +----------+
+    |    14222 |
+    +----------+
+    1 row in set (0.00 sec)
+
+    mysql> SELECT COUNT(*) FROM sommelier WHERE (grape_variety IS NULL);
+    +----------+
+    | COUNT(*) |
+    +----------+
+    |    13523 |
+    +----------+
+    1 row in set (0.00 sec)
+
+    mysql> SELECT COUNT(*) FROM sommelier WHERE (grape_variety IS NOT NULL AND appellation IS NOT NULL AND sub_region IS NOT NULL AND region IS NOT NULL AND country IS NOT NULL AND producer IS NOT NULL AND type IS NOT NULL AND style IS NOT NULL AND colour IS NOT NULL );
+    +----------+
+    | COUNT(*) |
+    +----------+
+    |    10169 |
+    +----------+
+    1 row in set (0.05 sec)
 
