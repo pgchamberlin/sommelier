@@ -30,3 +30,22 @@ Now we can install MySQLdb
 
 Documentation on working with MySQLdb is at: http://mysql-python.sourceforge.net/MySQLdb.html
 
+Sommelier usage:
+
+    import MySQLdb
+    from MySQLdb.constants import FIELD_TYPE
+    from MySQLdb.cursors import DictCursor
+    converter={ FIELD_TYPE.LONG: int }
+    db=MySQLdb.connect(user="sommelier",db="wine",passwd="vinorosso",conv=converter)
+    c=db.cursor(MySQLdb.cursors.DictCursor)
+    c.execute("SELECT * FROM sommelier")
+
+    >>> import recommendations
+    >>> import MySQLdb
+    >>> from MySQLdb.constants import FIELD_TYPE
+    >>> from MySQLdb.cursors import DictCursor
+    >>> converter={ FIELD_TYPE.LONG: int }
+    >>> db=MySQLdb.connect(user="sommelier",db="wine",passwd="vinorosso",conv=converter)
+    >>> c=db.cursor(MySQLdb.cursors.DictCursor)
+    >>> c.execute("SELECT * FROM sommelier")
+
