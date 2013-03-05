@@ -1,6 +1,6 @@
-# SQL Queries / Data (notes)
+# SQL Queries / Data cleanup (notes)
 
-Modification of tasting notes database
+## Modification of tasting notes database
 
     update tasting set author = 'Christelle Guibert' where author = 'C hristelle Guibert';
 
@@ -276,3 +276,14 @@ Wine data completeness...
     +----------+
     1 row in set (0.05 sec)
 
+## Conversion from latin1 to utf8:
+
+Based on advice from: http://en.gentoo-wiki.com/wiki/Convert_latin1_to_UTF-8_in_MySQL
+
+    $ mysqldump -uroot -p -hlocalhost --default-character-set=latin1 -c --insert-ignore --skip-set-charset -r wine_dump.sql wine
+    $ file wine_dump.sql
+    > wine_dump.sql: Non-ISO extended-ASCII English text, with very long lines
+    $ iconv -f ISO8859-1 -t UTF-8 wine_dump.sql > wine_dump_utf8.sql
+    $ sed -i 's/latin1/utf8/g' wine_dump_utf8.sql
+    mysql> CREATE DATABASE sommelier CHARACTER SET utf8 COLLATE utf8_general_ci;
+    
