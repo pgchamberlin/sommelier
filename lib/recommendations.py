@@ -68,8 +68,7 @@ def sim_distance(prefs,person1,person2):
 
   return 1/(1+sum_of_squares)
 
-# This method is equivalent to the above, but uses the scipy library's sqeuclidean method
-# instead of doing it myself (this adds validation for the vectors)
+# This method is equivalent to sim_distance() above, uses scipy's sqeuclidean method
 import scipy.spatial
 def euclidean_distance(prefs,person1,person2):
   vector1=[]
