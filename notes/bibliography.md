@@ -2,6 +2,13 @@
 
 Burke (2002) 'Hybrid Recommender Systems: Survey and Experiments' User Modeling and User-Adapted Interaction, Volume 12 Issue 4, November 2002, Pages 331 - 370. Kluwer Academic Publishers: Hingham, MA, USA
 
+A. Y. Ng and M. I. Jordan. On discriminative vs generative
+classifiers: A comparison of logistic regression and naive
+bayes. In Neural Information Processing Systems, pages
+841–848, Vancouver, Canada, december 2001. MIT Press.
+2
+
+
 Resnick, P., Iacovou, N., Suchak, M., Bergstrom, P. and Riedl, J.: 1994, ‘GroupLens: An Open Architecture for
 Collaborative Filtering of Netnews’. In: Proceedings of the Conference on Computer Supported Cooperative Work,
 Chapel Hill, NC, pp. 175-186.

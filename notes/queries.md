@@ -1,3 +1,5 @@
+#!text
+
 # SQL Queries / Data cleanup (notes)
 
 ## Modification of tasting notes database
@@ -232,6 +234,26 @@ Create auxiliary tables:
     CREATE TABLE sommelier_colour 
     SELECT id, description AS colour
     FROM wine_colour 
+
+Creating one-stop sommelier_wine table:
+    
+    CREATE TABLE `sommelier_wine` (   
+        `id` int(11) NOT NULL AUTO_INCREMENT,   
+        `name` varchar(255) DEFAULT NULL,   
+        `vintage` int(4) DEFAULT NULL,   
+        `grape_variety` varchar(255) DEFAULT NULL,   
+        `appellation` varchar(255) DEFAULT NULL,   
+        `sub_region` varchar(255) DEFAULT NULL,   
+        `region` varchar(255) DEFAULT NULL,   
+        `country` varchar(255) DEFAULT NULL,   
+        `producer` varchar(255) DEFAULT NULL,   
+        `type` varchar(255) DEFAULT NULL,   
+        `style` varchar(255) DEFAULT NULL,   
+        `colour` varchar(255) DEFAULT NULL,   
+        PRIMARY KEY (`id`)
+    );
+
+    INSERT INTO sommelier_wine SELECT DISTINCT * FROM sommelier_interim;
 
 Wine data completeness...
 

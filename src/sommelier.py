@@ -1,5 +1,5 @@
 #!python
-
+import math
 import MySQLdb
 from MySQLdb.constants import FIELD_TYPE
 from MySQLdb.cursors import DictCursor
@@ -32,4 +32,9 @@ class SommelierDb:
             self.cursor.close()
         if self.connection is not None:
             self.connection.close()
+
+class SommelierBroker:
+
+    def __init__(self):
+        self.db = SommelierDb()
 

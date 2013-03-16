@@ -5,8 +5,9 @@ app = Flask(__name__)
 broker = WineBroker()
 
 def sommelier_response(name, content, meta={}):
-    response = json.dumps({ name: content, 'meta': meta })
-    return Response(response.decode('unicode-escape'), status=200, mimetype='application/json; charset=utf-8')
+    response = json.dumps({ name: content, 'meta': meta }, encoding="utf-8")
+    response = ''.join(response.decode('unicode-escape').splitlines())
+    return Response(response, status=200, mimetype='application/json; charset=utf-8')
 
 @app.route('/')
 def sommelier_index():
@@ -22,7 +23,7 @@ def sommelier_wines(page):
 @app.route('/wine/<wineid>', methods = ['GET','POST'])
 def sommelier_wine(wineid):
     record = broker.getWine(wineid)
-    return get_sommelier_response('wine', record)
+    return sommelier_response('wine', record)
 
 @app.route('/users', methods = ['GET'])
 def sommelier_users():
