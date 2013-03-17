@@ -2,6 +2,30 @@
 
 Burke (2002) 'Hybrid Recommender Systems: Survey and Experiments' User Modeling and User-Adapted Interaction, Volume 12 Issue 4, November 2002, Pages 331 - 370. Kluwer Academic Publishers: Hingham, MA, USA
 
+@inproceedings{Debnath:2008:FWC:1367497.1367646,
+ author = {Debnath, Souvik and Ganguly, Niloy and Mitra, Pabitra},
+ title = {Feature weighting in content based recommendation system using social network analysis},
+ booktitle = {Proceedings of the 17th international conference on World Wide Web},
+ series = {WWW '08},
+ year = {2008},
+ isbn = {978-1-60558-085-2},
+ location = {Beijing, China},
+ pages = {1041--1042},
+ numpages = {2},
+ url = {http://doi.acm.org/10.1145/1367497.1367646},
+ doi = {10.1145/1367497.1367646},
+ acmid = {1367646},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {feature similarity, recommender system, social network},
+} 
+
+
+Goldberg, D. Nichols, D., Oki, B. M., and Terry, D. Using
+collaborative filtering to weave an information tapestry.
+Commun. ACM 35, 12 (Dec. 1992), 61--70.
+
+
 A. Y. Ng and M. I. Jordan. On discriminative vs generative
 classifiers: A comparison of logistic regression and naive
 bayes. In Neural Information Processing Systems, pages
