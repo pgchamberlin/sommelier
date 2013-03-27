@@ -15,6 +15,12 @@ date, the word count and the statement specified below under report details.
 
 \documentclass[12pt]{article}
 
+% custom paragraph to have line break after using mbox to hack :-/
+\newcommand{\myparagraph}[1]{\paragraph{#1}\mbox{}\\}
+
+% import graphicx package so we can import images
+\usepackage{graphicx}
+
 \begin{document}
 \maketitle
 

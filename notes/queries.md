@@ -308,4 +308,65 @@ Based on advice from: http://en.gentoo-wiki.com/wiki/Convert_latin1_to_UTF-8_in_
     $ iconv -f ISO8859-1 -t UTF-8 wine_dump.sql > wine_dump_utf8.sql
     $ sed -i 's/latin1/utf8/g' wine_dump_utf8.sql
     mysql> CREATE DATABASE sommelier CHARACTER SET utf8 COLLATE utf8_general_ci;
- 
+
+
+# Table counts
+
+mysql> select count(*) from wine;
++----------+
+| count(*) |
++----------+
+|    50539 |
++----------+
+1 row in set (0.01 sec)
+
+mysql> select count(*) from sommelier;
++----------+
+| count(*) |
++----------+
+|    31685 |
++----------+
+1 row in set (0.08 sec)
+
+mysql> select count(*) from sommelier_wine;
++----------+
+| count(*) |
++----------+
+|    27683 |
++----------+
+1 row in set (0.04 sec)
+
+mysql> select count(*) from sommelier_tasting;
++----------+
+| count(*) |
++----------+
+|     1952 |
++----------+
+1 row in set (0.00 sec)
+
+mysql> select count(*) from tasting;
++----------+
+| count(*) |
++----------+
+|    39601 |
++----------+
+1 row in set (0.00 sec)
+
+-----------------------------------------------------
+
+
+mysql> select count(*) from tasting t join wine w on w.id = t.wine_id join wine_info wi on w.id = wi.id left join producers p on p.id = wi.producer_id left join wine_grape_variety gv on gv.id = wi.grape_variety where t.rating > 0 and t.notes <> '' and w.vintage > 1900 and w.vintage < 2013 and wi.appellation_id <> 0 order by rand() limit 2\G
+*************************** 1. row ***************************
+count(*): 14273
+1 row in set (0.20 sec)
+
+mysql> select count(*) from tasting t join wine w on w.id = t.wine_id join wine_info wi on w.id = wi.id join producers p on p.id = wi.producer_id join wine_grape_variety gv on gv.id = wi.grape_variety where t.rating > 0 and t.notes <> '' and w.vintage > 1900 and w.vintage < 2013 and wi.appellation_id <> 0 order by rand() limit 2\G
+*************************** 1. row ***************************
+count(*): 13349
+1 row in set (0.20 sec)
+
+mysql> select count(*) from tasting t join wine w on w.id = t.wine_id join wine_info wi on w.id = wi.id left join producers p on p.id = wi.producer_id left join wine_grape_variety gv on gv.id = wi.grape_variety where t.rating > 0 and t.notes <> '' and w.vintage > 1900 and w.vintage < 2013\G*************************** 1. row ***************************
+count(*): 26586
+1 row in set (0.26 sec)
+
+
