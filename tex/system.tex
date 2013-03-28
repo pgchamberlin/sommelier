@@ -2,37 +2,37 @@
 
 \myparagraph{Data Cleanup}
 
-The data source I have used for my project is the wines database belonging to Decanter.com\cite{DecanterCom}. The database features professional ratings and tasting notes from as far back as 1986, and features wines from vintages as far back as 1917.
-
-GRAPH: Distribution of vintages
+The data source I have used for my project is the wines database belonging to Decanter.com\cite{DecanterCom}. The database contains nearly 40,000 professional ratings and tasting notes for wines from as far back as 1986, featuring vintages as far back as 1917.
 
 The original database is highly inconsistent, displaying a mixture of design approaches and a variable quality of data. This is consistent with the fact that the database has been developed over a long period of time by a number of different developers with varying levels of skill, and that wine journalists making entries into the database have taken a number of idiosyncratic approaches to data entry.
 
-Nevertheless there is a great deal of useful and interesting information in the database, as it contains ratings and/or tastings for over 33,000 wines.
+Nevertheless I considered there to be a great deal of useful and interesting information in the database, with it to contain usable ratings and/or tastings for over 33,000 wines.
 
-The ``wine\_info'' table is a mixture of foreign keys joining to very small tables, such as ``wine\_info.type\_id'' joining to ``wine\_type.id'' where ``wine\_type'' is a table with only two attributes. This approach, stiving for a high degree of normalisation, contrasts with the fact that the same table also has the attribute ``second\_wine'', as string which only holds data in 450 of the 38762 entries in the table.
+\begin{figure}[h!]
+    \caption{Decanter.com Database}
+    \centering
+        \includegraphics[width=14cm]{DecanterWineDB}
+    \label{fig:decanterdb}
+\end{figure}
+
+The WineInfo table is a mixture of foreign keys joining to very small tables, such as WineInfo.type\_id joining to WineType.id where WineType is a table with only two attributes. This approach, stiving for a high degree of normalisation, contrasts with the fact that the same table also has the attribute second\_wine, as a string which only holds data in 450 of the 38762 entries in the table.
 
 \myparagraph{Creating The Sommelier Dataset}
 
-As well as containing a large amount of unreliable or incomplete data which was of little use to my project, the database's complex design would not lend itself to simple queries. 
-
-Rather than using a large number of foreign key relations, which would necessitate a large number of joins at query time, I hoped to pare down the database to the minimum number of tables for the maximum ease of retrieval and manipulation. Figure \ref{fig:sommelierdb} shows the new database schema.
-
 \begin{figure}[h!]
-    \caption{Sommelier Database Schema}
+    \caption{Sommelier Database}
     \centering
-        \includegraphics[width=14cm]{SommelierDB}
+        \includegraphics[width=10cm]{SommelierDBSimple}
+    \label{fig:sommelierdb}
 \end{figure}
 
-Here I will describe that data and my reasoning for disregarding it...
+For the new Sommelier database, Figure \ref{fig:sommelierdb}, I decided to denormalise [explanation/citation needed!] the wine data. This enables the data to be queried without joins, maximising the simplicity and execution speed of the queries [citation needed]. Denormalization makes data integrity difficult to maintain however, as there are potentially a large number of records to update for any change in a duplicated value. In this case an appellation or sub-region name changing might require thousands of records to be amended. Creating and editing wines is not a requirement of my system though, so for the purposes of this project the wine and tasting data is static and will not be subject to updates. For this reason the duplication of data within the Wine records is not problematic. In a real world setting this would need to be revisited.
 
-The tables ``wine\_style\_narrow'' and ``wine\_style\_broad'' contained generic text descriptions for wine (``rich and creamy'', ``crisp and tangy'' etc.). I initially considered this to have potential for migration into tag data which I could reuse as part of my filtering. Unfortunately less than 6435 of the records in ``wine\_info'' had non-null values for their ``style\_narrow\_id'' field, and only 3397 had associations in the ``tasting'' table. 3397 was only around 10\% of the wines I expected to be working with in my migrated dataset, I reckoned this too low a proportion to be worthwhile.
+Much of the data from the original database was disregarded entirely.
 
-The table ``wine\_style'' was rejected for the same reasons as those above.
+The tables WineStyleNarrow and WineStyleBroad contained generic text descriptions for wine (``rich and creamy'', ``crisp and tangy'' etc.). I initially considered this to have potential for migration into tag data which I could reuse as part of my filtering. Unfortunately less than 6435 of the records in WineInfo had non-null values for their style\_narrow\_id field, and only 3397 of these had corresponding records in the Tasting table. This figure was only around 10\% of the number of wines I expected the Sommelier database to contain so I decided that the WineStyle* tables were probably not worthwhile to migrate.
 
-The ``wine\_type'' table was ignored because no wines were related to it. Those wines with the ``type\_id'' field populated in the database were populated with keys which did not match any ``id'' in the type table.
-
-The ``producers'' table was not disregarded, as there were over 20,000 wines with tasting notes and a producer record.
+The WineType table was ignored because no wines corresponded to it; no WineInfo.type\_id record matched any WineType.id.
 
 \myparagraph{The Author Problem}
 
