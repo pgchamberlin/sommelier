@@ -34,6 +34,8 @@ The tables WineStyleNarrow and WineStyleBroad contained generic text description
 
 The WineType table was ignored because no wines corresponded to it; no WineInfo.type\_id record matched any WineType.id.
 
+The TasterRating and TastingId tables were discarded because they only referenced 1158 of the records in Tasting, too small a proportion of the Tasting table to make it worthwhile migrating them into the dataset.
+
 \myparagraph{The Author Problem}
 
 The biggest shortcoming of the dataset is that the author of a tasting note is often not recorded. The number of wines with notes and known authors is only 1401, with there being 18 named authors on the system. 
@@ -41,32 +43,52 @@ The biggest shortcoming of the dataset is that the author of a tasting note is o
 Table \ref{table:authors} shows the distribution of tastings amongst authors, only 5 of which have tasted and rated more than 100 wines in the database.
 
 \begin{table}[ht]
-\caption{Authors of tasting notes and ratings}
-\centering
-\begin{tabular}{c c}
-\\\hline\hline
-Author               & Wines tasted, with notes and rating
-\\\hline
-Amy Wislocki         &            28 \\
-Andrew Jefford       &           105 \\
-Beverley Blanning MW &            13 \\
-Carolyn Holmes       &             1 \\
-Christelle Guibert   &           119 \\
-Clive Coates MW      &             6 \\
-David Peppercorn     &            44 \\
-Gerald D Boyd        &             7 \\
-Harriet Waugh        &           250 \\
-James Lawther MW     &           226 \\
-John Radford         &             2 \\
-Josephine Butchart   &            24 \\
-Norm Roby            &             4 \\
-Rosemary George MW   &             6 \\
-Serena Sutcliffe     &            31 \\
-Stephen Brook        &            19 \\
-Steven Spurrier      &           497 \\
-\\\hline
-\end{tabular}
-\label{table:authors}
+    \caption{Authors of tasting notes and ratings}
+    \centering
+    \begin{tabular}{c c c}
+        \\\hline\hline
+        Author               & Wines tasted & Wines also tasted by another
+        \\\hline
+        Amy Wislocki         &           28 & - \\
+        Andrew Jefford       &          105 & 38 \\
+        Beverley Blanning MW &           13 & - \\
+        Carolyn Holmes       &            1 & - \\
+        Christelle Guibert   &          119 & 9 \\
+        Clive Coates MW      &            6 & - \\
+        David Peppercorn     &           44 & - \\
+        Gerald D Boyd        &            7 & - \\
+        Harriet Waugh        &          250 & 23 \\
+        James Lawther MW     &          226 & 21 \\
+        John Radford         &            2 & - \\
+        Josephine Butchart   &           24 & 1 \\
+        Norm Roby            &            4 & - \\
+        Rosemary George MW   &            6 & - \\
+        Serena Sutcliffe     &           31 & 15 \\
+        Stephen Brook        &           19 & 3 \\
+        Steven Spurrier      &          497 & 53 \\
+        \\\hline
+    \end{tabular}
+    \label{table:authors}
+\end{table}
+
+\begin{table}[ht]
+    \caption{Matrix of authors with wines tasted in common}
+    \centering
+    \begin{tabular}{c c c c c c c c c}
+        \\\hline\hline
+        Author & SS & JL & JB & SB & CG & SS & HW & AJ
+        \\\hline
+        Steven Spurrier (SS)     & - & 6  & 1  & 1  & 7  & 0 & 15 & 30 \\
+        James Lawther MW (JL)    & 6  & - & 0 & 0 & 0 & 15 & 0 & 0 \\
+        Josephine Butchart (JB)  & 1  & 0 & - & 0 & 0 & 0 & 0 & 0 \\
+        Stephen Brook (SB)       & 1  & 0 & 0 & - & 0 & 0 & 1  & 1  \\
+        Christelle Guibert (CG)  & 7  & 0 & 0 & 0 & - & 0 & 1  & 5  \\
+        Serena Sutcliffe (SS)    & 0 & 15 & 0 & 0 & 0 & - & 0 & 0 \\
+        Harriet Waugh (HW)       & 15 & 0 & 0 & 1  & 1  & 0 & - & 10 \\
+        Andrew Jefford (AJ)      & 30 & 0 & 0 & 1  & 5  & 0 & 10 & - \\
+        \\\hline
+    \end{tabular}
+    \label{table:authormatrix}
 \end{table}
 
 In some cases an author's initials or full name are recorded within the text of a tasting note. I decided that extracting and making use of these was impractical given the time constraints of this project.
@@ -78,3 +100,31 @@ THE SOMMELIER DATASET
 Having analysed the dataset and conceived an ideal schema, I needed to decide what the criteria to apply when extracting my new dataset from the source data.
 
 Given that the purpose of the dataset is social recommendations, the first decision I made was to discard any wines without both tasting notes and a rating, whether.
+
+\myparagraph{Making Recommendations}
+
+In Chapter 2 of Collective Intelligence\cite{Segaran02}, Segaran details basic methods for user- and item-based collaborative filtering. Following the guidelines from this chapter I recreated Segaran's recommendation methods and applied them to my dataset.
+
+TODO Comparison of Segaran and Movielens datasets and Sommelier - why the results no good using straightforward methods?
+
+
+TODO appendix of data
+
+
+1. select a.name, count( t.id ) from author a join tasting t on a.id = t.author\_id where 0 < ( select count(*) from tasting t2 where t2.winei\_id = t
+.wine\_id and t2.author\_id <> 0 and t2.author\_id <> t.author\_id)  group by a.id;                                                                        
++--------------------+---------------+
+| name               | count( t.id ) |
++--------------------+---------------+
+| Steven Spurrier    |            53 |
+| James Lawther MW   |            21 |
+| Josephine Butchart |             1 |
+| Stephen Brook      |             3 |
+| Christelle Guibert |             9 |
+| Serena Sutcliffe   |            15 |
+| Harriet Waugh      |            23 |
+| Andrew Jefford     |            38 |
++--------------------+---------------+
+
+2. select a.name, count( t.id ) from author a join tasting t on a.id = t.author\_id where 0 < ( select count(*) from tasting t2 where t2.wine\_id = t.wine\_id and t2.author\_id = {N} ) group by a.id; 
+

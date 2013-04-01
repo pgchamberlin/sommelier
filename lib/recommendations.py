@@ -160,7 +160,7 @@ def transformPrefs(prefs):
     return result
 
 # Method copied from Segaran: Collective Intelligence (2006) Ch.2
-def calculateSimilarItems(prefs,n=10):
+def calculateSimilarItems(prefs,n=10,similarity=sim_distance):
     result={}
 
     itemPrefs=transformPrefs(prefs)
@@ -220,7 +220,7 @@ def loadSommelierWines(comparator='rating'):
     from src.sommelier import SommelierDb
     db = SommelierDb()
     db.execute("""
-select sw.name as wine, sw.vintage as vintage, t.author as author, t.rating as rating, t.notes as notes from sommelier_wine_complete sw join sommelier_tasting t on t.wine_id = sw.id where 1 < ( select count( distinct t2.author ) from sommelier_tasting t2 where t2.wine_id = sw.id and t.rating <> 0 )
+select w.name as wine, w.vintage as vintage, a.name as author, t.rating as rating, t.notes as notes from wine w join tasting t on t.wine_id = w.id join author a on a.id = t.author_id
     """)
     results = db.fetchall()
 
@@ -235,7 +235,7 @@ select sw.name as wine, sw.vintage as vintage, t.author as author, t.rating as r
         if comparator == 'notes':
             comp = row['notes']
         else:
-            comp = row['rating'] + 0.0
+            comp = row['rating'] + 0.000000
         prefs[user][''.join([wine,str(vintage)])] = comp
         #     {
         #        'rating': row['rating'], 
@@ -243,4 +243,22 @@ select sw.name as wine, sw.vintage as vintage, t.author as author, t.rating as r
         #     }
 
     return prefs
+
+def loadSommelierAuthors():
+    from src.sommelier import SommelierDb
+    db = SommelierDb()
+    db.execute("""
+select w.name as wine, w.vintage as vintage, a.name as author, t.rating as rating from wine w join tasting t on t.wine_id = w.id join author a on a.id = t.author_id
+    """)
+    results = db.fetchall()
+
+    authors = {}
+    for row in results:
+        author = row['author']
+        wine = ' '.join([row['wine'], str(row['vintage'])])
+        rating = row['rating']
+        authors.setdefault(author,{})
+        authors[author][wine] = rating;
+    
+    return authors
 

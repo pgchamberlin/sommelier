@@ -28,6 +28,5 @@ Python console:
 
     # using methods from Segaran get similar items
     winesim = recommendations.calculateSimilarItems(wines)
-    wines
 
 

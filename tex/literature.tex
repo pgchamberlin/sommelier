@@ -4,9 +4,32 @@ Chapter 2: Literature Review and Context - the setting of the project in the con
 
 \section{Literature Review}\label{literature review}
 
-The term ``recommender system'' was coined by Resnick and Varian \cite{Resnick97} to describe  a system that ``assists and augments'' the ``natural social process'' of recommendation, preferring it to the more narrow term ``collaborative filtering'' used by Goldberg et al. \cite{Goldberg92}  to describe their Tapestry system. 
+The term \textit{recommender system} was coined by Resnick and Varian \cite{Resnick97} to describe  a system that ``assists and augments'' the ``natural social process'' of recommendation, with Resnick and Varian stating that they preferred it to the more narrow term ``collaborative filtering'' used by Goldberg et al. \cite{Goldberg92}  to describe their Tapestry system.
 
-There are now several main categories of filtering technique employed in recommender systems. Burke \cite{Burke02} looks at five of these: collaborative, content-based, demographic, utiliy-based and knowledge-based (Burke, 2002). 
+The growth of the World Wide Web has seen recommender systems become a ubiquitous part of everyday life, with companies such as Amazon, Facebook, Twitter and Google using making recommendations to millions of us every day.
+
+\ldots
+
+There are several main categories of filtering technique employed in recommender systems. Burke \cite{Burke02} presents five: \textit{collaborative}, \textit{content-based}, \textit{demographic}, \textit{utility-based} and \textit{knowledge-based}. Table \ref{table:burke02} details these methods and their characteristics.
+
+\begin{table}[ht]
+    \caption{Recommendation Techniques, reproduced from Burke, 2002 \cite{Burke02}}
+    \centering
+    \begin{tabular}{|p{2.5cm}|p{3.5cm}|p{3.5cm}|p{3.5cm}|}
+        Technique & Backgroud & Input & Process
+        \\\hline
+        Collaborative & Ratings from \textit{U} of items in \textit{I}. & Ratings from \textit{u} of items in \textit{I}. & Identify users in \textit{U} similar to \textit{u}, and extrapolate from their ratings of \textit{i}. \\
+        Content-based & Features of items in \textit{I}. & \textit{u}'s ratings of items in \textit{I}. & Generate a classifier that fits \textit{u}'s rating behaviour and use it on \textit{i}. \\ 
+        Demographic & Demographic information about \textit{U} and their ratings of items in \textit{I}. & Demographic information about \textit{u}. & Identify users that are demographically similar to \textit{u}, and extrapolate from their ratings of \textit{i}. \\
+        Utility-based & Features of items in \textit{I}. & A utility function over items in \textit{I} that describes \textit{u}'s preferences. & Apply the function to the items and determine \textit{i}'s rank. \\
+        Knowledge-based & Features of items in \textit{I}. Knowledge of how these items meet a user's needs. & A description of \textit{u}'s needs or interests. & Infer a match between \textit{i} and \textit{u}'s need. \\
+        \\\hline
+    \end{tabular}
+    \label{table:burke02}
+\end{table}
+
+Each of these methods lends itself better to some purposes than others\ldots
+
 
 \myparagraph{Collaborative Filtering.}
 

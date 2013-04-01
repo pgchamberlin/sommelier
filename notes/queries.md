@@ -134,6 +134,7 @@ How many wines have been tasted by > 1 author, named or ''?
     +----------+
     1 row in set (0.32 sec)
 
+
 How many wines in total?
 
     mysql> select count(*) from wine;
@@ -152,109 +153,6 @@ Generally speaking:
 29185  ... as above with rating > 0
 29732  ... as above with notes <> '' (i.e. written tasting note)
 27232  ... as above with intersection of rating > 0 and notes <> ''`
-
-Query for eligible wines:
-
-    select 
-      w.name, 
-      w.producer, 
-      w.vintage, 
-      w.appellation, 
-      w.sub_region, 
-      w.region, 
-      w.country, 
-      w.wine_type, 
-      w.sub_type, 
-      w.colour, 
-      t.notes, 
-      t.author, 
-      t.rating, 
-      t.tasting_date, 
-      t.price, 
-      t.source, 
-      t.status 
-    from 
-      denormalised_quick_search_data w 
-    join tasting as t on w.id = t.wine_id 
-
-Create sommelier_wine table:
-
-    CREATE TABLE sommelier_wine 
-    SELECT 
-      w.id, 
-      w.name, 
-      w.vintage, 
-      w.grape_variety as sommelier_grape_variety_id, 
-      w.appellation_id as sommelier_appelation_id, 
-      w.sub_region_id as sommelier_sub_region_id, 
-      w.region_id as sommelier_region_id, 
-      w.country_id as sommelier_country_id, 
-      w.producer_id as sommelier_producer_id,
-      w.wine_type_id as sommelier_type_id, 
-      w.sub_type_id as sommelier_style_id, 
-      w.colour_id as sommelier_colour_id 
-    FROM denormalised_quick_search_data w
-    INNER JOIN tasting t ON w.id = t.wine_id 
-    WHERE (t.notes <> '' OR t.rating > 0)
-
-Create auxiliary tables:
-
-    CREATE TABLE sommelier_grape_variety 
-    SELECT * 
-    FROM wine_grape_variety
-
-    CREATE TABLE sommelier_appellation 
-    SELECT id, appellation 
-    FROM appellation
-
-    CREATE TABLE sommelier_sub_region 
-    SELECT id, sub_region 
-    FROM sub_region;
-
-    CREATE TABLE sommelier_region 
-    SELECT id, region 
-    FROM region
-
-    CREATE TABLE sommelier_country 
-    SELECT id, country 
-    FROM country
-
-    CREATE TABLE sommelier_producer 
-    SELECT id, producer_match AS producer
-    FROM producers
-
-    CREATE TABLE sommelier_type 
-    SELECT id, description AS type 
-    FROM wine_type;
-
-    CREATE TABLE sommelier_style 
-    SELECT id, description AS style 
-    FROM wine_sub_type;
-
-    CREATE TABLE sommelier_colour 
-    SELECT id, description AS colour
-    FROM wine_colour 
-
-Creating one-stop sommelier_wine table:
-    
-    CREATE TABLE `sommelier_wine` (   
-        `id` int(11) NOT NULL AUTO_INCREMENT,   
-        `name` varchar(255) DEFAULT NULL,   
-        `vintage` int(4) DEFAULT NULL,   
-        `grape_variety` varchar(255) DEFAULT NULL,   
-        `appellation` varchar(255) DEFAULT NULL,   
-        `sub_region` varchar(255) DEFAULT NULL,   
-        `region` varchar(255) DEFAULT NULL,   
-        `country` varchar(255) DEFAULT NULL,   
-        `producer` varchar(255) DEFAULT NULL,   
-        `type` varchar(255) DEFAULT NULL,   
-        `style` varchar(255) DEFAULT NULL,   
-        `colour` varchar(255) DEFAULT NULL,   
-        PRIMARY KEY (`id`)
-    );
-
-    INSERT INTO sommelier_wine SELECT DISTINCT * FROM sommelier_interim;
-
 Wine data completeness...
 
     SELECT COUNT(*) FROM sommelier WHERE (grape_variety IS NULL OR appellation IS NULL OR sub_region IS NULL OR region IS NULL OR country IS NULL OR producer IS NULL OR type IS NULL OR style IS NULL OR colour IS NULL);
@@ -302,71 +200,163 @@ Wine data completeness...
 
 Based on advice from: http://en.gentoo-wiki.com/wiki/Convert_latin1_to_UTF-8_in_MySQL
 
+    From the Bash shell:
     $ mysqldump -uroot -p -hlocalhost --default-character-set=latin1 -c --insert-ignore --skip-set-charset -r wine_dump.sql wine
     $ file wine_dump.sql
     > wine_dump.sql: Non-ISO extended-ASCII English text, with very long lines
     $ iconv -f ISO8859-1 -t UTF-8 wine_dump.sql > wine_dump_utf8.sql
     $ sed -i 's/latin1/utf8/g' wine_dump_utf8.sql
+
+    Now, from the MySQL command line:
     mysql> CREATE DATABASE sommelier CHARACTER SET utf8 COLLATE utf8_general_ci;
 
-
-# Table counts
-
-mysql> select count(*) from wine;
-+----------+
-| count(*) |
-+----------+
-|    50539 |
-+----------+
-1 row in set (0.01 sec)
-
-mysql> select count(*) from sommelier;
-+----------+
-| count(*) |
-+----------+
-|    31685 |
-+----------+
-1 row in set (0.08 sec)
-
-mysql> select count(*) from sommelier_wine;
-+----------+
-| count(*) |
-+----------+
-|    27683 |
-+----------+
-1 row in set (0.04 sec)
-
-mysql> select count(*) from sommelier_tasting;
-+----------+
-| count(*) |
-+----------+
-|     1952 |
-+----------+
-1 row in set (0.00 sec)
-
-mysql> select count(*) from tasting;
-+----------+
-| count(*) |
-+----------+
-|    39601 |
-+----------+
-1 row in set (0.00 sec)
+    And finally, back in the Bash shell:
+    $ mysql -uroot --max_allowed_packet=16M -p --default-character-set=utf8 sommelier < wine_dump_utf8.sql
 
 -----------------------------------------------------
-
 
 mysql> select count(*) from tasting t join wine w on w.id = t.wine_id join wine_info wi on w.id = wi.id left join producers p on p.id = wi.producer_id left join wine_grape_variety gv on gv.id = wi.grape_variety where t.rating > 0 and t.notes <> '' and w.vintage > 1900 and w.vintage < 2013 and wi.appellation_id <> 0 order by rand() limit 2\G
 *************************** 1. row ***************************
 count(*): 14273
 1 row in set (0.20 sec)
 
-mysql> select count(*) from tasting t join wine w on w.id = t.wine_id join wine_info wi on w.id = wi.id join producers p on p.id = wi.producer_id join wine_grape_variety gv on gv.id = wi.grape_variety where t.rating > 0 and t.notes <> '' and w.vintage > 1900 and w.vintage < 2013 and wi.appellation_id <> 0 order by rand() limit 2\G
-*************************** 1. row ***************************
-count(*): 13349
-1 row in set (0.20 sec)
+--------------------------------------------------------
 
-mysql> select count(*) from tasting t join wine w on w.id = t.wine_id join wine_info wi on w.id = wi.id left join producers p on p.id = wi.producer_id left join wine_grape_variety gv on gv.id = wi.grape_variety where t.rating > 0 and t.notes <> '' and w.vintage > 1900 and w.vintage < 2013\G*************************** 1. row ***************************
-count(*): 26586
-1 row in set (0.26 sec)
+Content for sommelier.wine:
 
+CREATE TABLE `sommelier_wine` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL DEFAULT '',
+  `vintage` int(4) NOT NULL DEFAULT '0',
+  `grape_variety` varchar(255) NOT NULL DEFAULT '',
+  `producer` varchar(255) NOT NULL DEFAULT '',
+  `country` varchar(255) NOT NULL DEFAULT '',
+  `region` varchar(255) NOT NULL DEFAULT '',
+  `sub_region` varchar(255) NOT NULL DEFAULT '',
+  `appellation` varchar(255) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+
+INSERT INTO sommelier_wine SELECT 
+  w.id,
+  w.name AS name, 
+  w.vintage AS vintage, 
+  p.producer_match AS producer, 
+  gv.description AS description,
+  c.country AS country,
+  r.region AS region,
+  sr.sub_region AS sub_region,
+  a.appellation AS appellation
+FROM
+  wine w 
+JOIN wine_info wi ON w.id = wi.id 
+LEFT JOIN producers p ON p.id = wi.producer_id 
+LEFT JOIN wine_grape_variety gv ON gv.id = wi.grape_variety 
+LEFT JOIN appellation a ON a.id = wi.appellation_id
+LEFT JOIN sub_region sr ON sr.id = a.sub_region_id
+LEFT JOIN region r ON r.id = sr.region_id
+LEFT JOIN country c ON c.id = r.country_id
+WHERE w.vintage > 1900 
+  AND w.vintage < 2013 
+  AND wi.appellation_id <> 0
+ORDER BY w.id ASC;
+
+Content for sommelier.author:
+
+CREATE TABLE `sommelier_author` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+
+INSERT INTO sommelier_author SELECT DISTINCT
+  NULL,
+  t.author as name
+FROM
+  tasting t
+WHERE t.author <> '';
+
+Content for sommelier.tasting:
+
+CREATE TABLE `sommelier_tasting` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `wine_id` int(11) NOT NULL,
+  `author_id` int(11) NOT NULL,
+  `rating` int(11) NOT NULL,
+  `notes` TEXT NOT NULL,
+  `tasting_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+
+INSERT INTO sommelier_tasting SELECT
+  NULL,
+  t.wine_id AS wine_id,
+  a.id AS author_id,
+  t.rating AS rating,
+  t.notes AS notes,
+  t.tasting_date AS tasting_date
+FROM
+  tasting t 
+JOIN wine w ON w.id = t.wine_id 
+JOIN wine_info wi ON w.id = wi.id 
+LEFT JOIN sommelier_author a ON t.author = a.name
+WHERE t.rating > 0 
+  AND t.notes <> '' 
+  AND w.vintage > 1900 
+  AND w.vintage < 2013 
+  AND wi.appellation_id <> 0
+ORDER BY w.id ASC;
+
+Finally, delete all wines without tasting records:
+
+DELETE FROM sommelier_wine WHERE id NOT IN ( SELECT wine_id FROM sommelier_tasting );
+
+DROP TABLE wine;
+DROP TABLE tasting;
+DROP TABLE author;
+
+RENAME TABLE sommelier_wine TO wine;
+
+RENAME TABLE sommelier_tasting TO tasting;
+
+RENAME TABLE sommelier_author TO author;
+
+/*
+mysql> show tables;
++---------------------+
+| Tables_in_sommelier |
++---------------------+
+| author              |
+| tasting             |
+| wine                |
++---------------------+
+3 rows in set (0.00 sec)
+*/
+
+
+// Author ids...
+
++----+----------------------+
+| id | name                 |
++----+----------------------+
+|  1 | Steven Spurrier      |
+|  2 | Beverley Blanning MW |
+|  3 | James Lawther MW     |
+|  4 | Josephine Butchart   |
+|  5 | Rosemary George MW   |
+|  6 | Norm Roby            |
+|  7 | Clive Coates MW      |
+|  8 | John Radford         |
+|  9 | Gerald D Boyd        |
+| 10 | Stephen Brook        |
+| 11 | Christelle Guibert   |
+| 12 | Alan Spencer         |
+| 13 | Serena Sutcliffe     |
+| 14 | Harriet Waugh        |
+| 15 | Andrew Jefford       |
+| 16 | David Peppercorn     |
+| 17 | Richard Mayson       |
+| 18 | Carolyn Holmes       |
+| 19 | Amy Wislocki         |
++----+----------------------+
 
