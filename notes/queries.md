@@ -256,9 +256,6 @@ LEFT JOIN appellation a ON a.id = wi.appellation_id
 LEFT JOIN sub_region sr ON sr.id = a.sub_region_id
 LEFT JOIN region r ON r.id = sr.region_id
 LEFT JOIN country c ON c.id = r.country_id
-WHERE w.vintage > 1900 
-  AND w.vintage < 2013 
-  AND wi.appellation_id <> 0
 ORDER BY w.id ASC;
 
 Content for sommelier.author:
@@ -285,7 +282,9 @@ CREATE TABLE `sommelier_tasting` (
   `rating` int(11) NOT NULL,
   `notes` TEXT NOT NULL,
   `tasting_date` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `wine_idx` (`wine_id`),
+  KEY `author_idx` (`author_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 
 INSERT INTO sommelier_tasting SELECT
@@ -302,9 +301,6 @@ JOIN wine_info wi ON w.id = wi.id
 LEFT JOIN sommelier_author a ON t.author = a.name
 WHERE t.rating > 0 
   AND t.notes <> '' 
-  AND w.vintage > 1900 
-  AND w.vintage < 2013 
-  AND wi.appellation_id <> 0
 ORDER BY w.id ASC;
 
 Finally, delete all wines without tasting records:

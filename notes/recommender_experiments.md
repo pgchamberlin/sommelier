@@ -29,4 +29,21 @@ Python console:
     # using methods from Segaran get similar items
     winesim = recommendations.calculateSimilarItems(wines)
 
+Getting user <-> user recommendations
+
+>>> reload(recommendations)
+<module 'lib.recommendations' from 'lib/recommendations.py'>
+>>> asims = recommendations.getAuthorSimilarities()
+>>> asims['Harriet Waugh']
+{'Andrew Jefford': 0.7071067811865475, 'Steven Spurrier': 0.6708203932499369}
+>>> asims['Andrew Jefford']
+{'Harriet Waugh': 0.7071067811865475, 'Steven Spurrier': 0.4879500364742666}
+>>> asims['Josephine Butchart']
+{}
+>>> asims['Stephen Brook']
+{}
+>>> asims['Steven Spurrier']
+{'Harriet Waugh': 0.6708203932499369, 'Andrew Jefford': 0.4879500364742666, 'James Lawther MW': 0.5773502691896258}
+>>> asims['Amy Wislocki']
+{}
 
