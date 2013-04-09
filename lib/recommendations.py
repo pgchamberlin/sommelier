@@ -262,3 +262,17 @@ select w.name as wine, w.vintage as vintage, a.name as author, t.rating as ratin
     
     return authors
 
+def getAuthorSimilarities(similarity=sim_pearson):
+    authors = loadSommelierAuthors()
+
+    sims = {}
+    for author1 in authors.keys():
+        sims.setdefault(author1, {})
+        for author2 in authors.keys():
+            if author1 == author2:
+                continue
+            sim = similarity(authors, author1, author2)
+            if sim != 0:
+                sims[author1][author2] = sim
+    return sims
+
