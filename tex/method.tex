@@ -1,2 +1,23 @@
 \section{Development Method}\label{method}
 
+The two main aims of my project were to create a recommender system for wines, and to implement an API for that system which might act as a service back end for a web application.
+
+\myparagraph{Python}
+
+My first enquiries into recommender systems included looking at Segaran's code examples in \textit{Collective Intelligence} \cite{Segaran07}, where the language he uses for his implementations is Python. Other authors on recommender systems also use Python, such as \cite{CitationNeeded}. Looking into the language further it became apparent that there are many tools available to the Python programmer that are particularly useful for this kind of system, such as the libraries Scipy\cite{Scipy}, Numpy\cite{Numpy} and, for natural language processing, NLTK\cite{NLTK}.
+
+For the most part my system would suit the stateless, non-persistent nature of a Python web application. The only concern in this regard would be that I would need to recreate objects in memory from scratch with each request rather than persist them as I might using another language, such as using Java with the JPA\cite{JavaJPA}. Should the lack of persistence prove problematic down the line I looked into the possibility of using a persistence mechanism such as Memcache\cite{Memcache} to serve this purpose, and found that there is wide support for such a solution using Python and Flask\cite{MemcacheFlaskSupport}.
+
+With Python there is also a solid heritage of web application frameworks, such as Django\cite{Django} which is widely used for enterprise websites. I felt that Django might be a bit too fully featured for my purposes however [WHY?], and instead decided to use the framework Flask\cite{Flask}, which is developed with small services in mind and would be ideally suited to my purposes.
+
+\myparagraph{MySQL}
+
+Originally I had envisaged a system backed by a PostgreSQL\cite{PostgreSQL} RDBMS, but having received the Decanter.com data as a MySQL\cite{MySQL} database it did not seem, comparing the two systems, that there would be any significant benefit migrating the data to PostgreSQL. Both are widely used in production, and have similar feature sets. For a short time I considered using a ``NoSQL'' database such as MongoDB\cite{MongoDB} for my project, but decided against such a solution, recognising that such document-oriented systems are not ideal when joining between tables in the way that I would need to for my wines and tasting notes. It seemed that an RDBMS was ideally suited to the purpose, and there was no reason why that shouldn't be MySQL.
+
+\myparagraph{GitHub}
+
+In order to back-up and version my code I chose to use GitHub\cite{GitHumSite}, which is a web service providing Git version control. I chose to use GitHub for my notes and project files also, so that my project was stored and versioned in its entirety in a private repository on GitHub.
+
+\myparagraph{Methodology}
+
+It was clear early in the planning for this project that I would be doing a large amount of experimental programming, with the recommendations the system makes being a work in progress.
