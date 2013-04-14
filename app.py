@@ -1,49 +1,38 @@
 #!python
-from src.wines import WineBroker
-from flask import Flask, request, Response, jsonify, json
-app = Flask(__name__)
-broker = WineBroker()
 
-def sommelier_response(name, content, meta={}):
-    response = json.dumps({ name: content, 'meta': meta }, encoding="utf-8")
-    response = ''.join(response.decode('unicode-escape').splitlines())
-    return Response(response, status=200, mimetype='application/json; charset=utf-8')
+# import and intialize Flask
+from flask import Flask, Response
+app = Flask(__name__)
+
+# import and initialize Sommelier
+from src.sommelier import Sommelier
+sommelier = Sommelier()
 
 @app.route('/')
 def sommelier_index():
     return "index"
 
-@app.route('/wines', defaults = {'page': 1}, methods = ['GET'])
-@app.route('/wines/<int:page>', methods = ['GET'])
-def sommelier_wines(page):
-    records = broker.getPage(page)
-    numpages = broker.getNumPages()
-    return sommelier_response('wines', records, { 'numpages': numpages })
+@app.route('/wines', defaults = {'page_num': 1}, methods = ['GET'])
+@app.route('/wines/<int:page_num>', methods = ['GET'])
+def sommelier_wines(page_num):
+    response_body, keyed_args_dict = sommelier.wines_page(page_num)
+    return Response(response_body, **keyed_args_dict)
 
-@app.route('/wine/<wineid>', methods = ['GET','POST'])
-def sommelier_wine(wineid):
-    record = broker.getWine(wineid)
-    return sommelier_response('wine', record)
+@app.route('/wine/<wine_id>', methods = ['GET'])
+def sommelier_wine(wine_id):
+    response_body, keyed_args_dict = sommelier.wine(wine_id)
+    return Response(response_body, **keyed_args_dict)
 
-@app.route('/users', methods = ['GET'])
-def sommelier_users():
-    return 'list of users'
+@app.route('/authors', defaults = {'page_num': 1}, methods = ['GET'])
+@app.route('/authors/<int:page_num>', methods = ['GET'])
+def sommelier_authors(page_num):
+    response_body, keyed_args_dict = sommelier.authors_page(page_num)
+    return Response(response_body, **keyed_args_dict)
 
-@app.route('/user/new', methods = ['GET', 'POST'])
-def sommelier_users():
-    return 'list of users'
-
-@app.route('/user/authenticate', methods = ['GET','POST'])
-def sommelier_authenticate():
-    return 'authenticate user'
-
-@app.route('/user/deauthenticate', methods = ['GET'])
-def sommelier_deauthenticate():
-    return 'deauthenticate user'
-
-@app.route('/user/<username>', methods = ['GET','POST'])
-def sommelier_user():
-    return 'individual user: %s' % username
+@app.route('/author/<author_id>', methods = ['GET'])
+def sommelier_author(author_id):
+    response_body, keyed_args_dict = sommelier.author(author_id)
+    return Response(response_body, **keyed_args_dict)
 
 if __name__ == '__main__':
     app.run(debug=True)
