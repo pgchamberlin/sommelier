@@ -5,8 +5,10 @@ from brokers import WineBroker, AuthorBroker, SommelierBroker
 from recommender import Recommender
 from sommelier import Sommelier
 
-# Simple tests to make sure that the brokers call the db how we want them to, i.e.
-# using and templating their queries as we expect
+# Tests for the sommelier app, making sure it returns the right content in the 
+# right format for each request, and that its auxiliary methods, like
+# http_success_json() work properly
+
 class SommelierTest(unittest.TestCase):
 
     def setUp(self):
@@ -22,8 +24,12 @@ class SommelierTest(unittest.TestCase):
         self.sommelier = Sommelier(wb=mock_broker, ab=mock_broker, r=mock_recommender)
  
     def test_http_success_json(self):
+        # method takes any dict as input
         test_content = { 'test': 'test content' }
+        # should convert that dict into a UTF-8 JSON string, returned as first item of tuple
         expected_content = u'{"test": "test content"}'
+        # also expected to return a dict with HTTP status and MIME Type parameters
+        # - these will be converted to keyed arguments to Response() later using **
         expected_keyed_args_dict = { 'status': 200, 'mimetype': 'application/json; charset=utf-8' }
         response_body, keyed_args_dict = self.sommelier.http_success_json(test_content)
         self.assertEqual(expected_content, response_body)
