@@ -4,28 +4,23 @@ from dbconnector import SommelierDbConnector
 
 class SommelierBroker:
 
-    authors_query = """
-        SELECT * 
+    rating_data_query = """
+        SELECT a.id as author_id, t.rating as rating, w.id as wine_id 
         FROM author a
+        JOIN tasting t ON t.author_id = a.id
+        JOIN wine w ON t.wine_id = w.id
+    """
+    wine_ids_query = """
+        SELECT id 
+        FROM wine w
+        ORDER BY id ASC
         """
     wines_query = """
         SELECT * 
         FROM wine w
+        ORDER BY id ASC
         """
-    def __init__(self, db=SommelierDbConnector()):
-        self.db = db
-
-    def get_authors(self):
-        self.db.execute(self.authors_query)
-        return self.db.fetch_all()
-
-    def get_wines(self):
-        self.db.execute(self.wines_query)
-        return self.db.fetch_all()
-
-class WineBroker(SommelierBroker):
-
-    wines_page_query = """
+    wine_page_query = """
         SELECT * 
         FROM wine w
         LIMIT {} OFFSET {}
@@ -36,21 +31,56 @@ class WineBroker(SommelierBroker):
         LEFT JOIN author a ON t.author_id = a.id
         WHERE w.id = {}
         """
-    wines_count_query = """
+    wine_count_query = """
         SELECT COUNT(*) AS count FROM wine
+        """
+    authors_query = """
+        SELECT * 
+        FROM author a
+        ORDER BY id ASC
+        """
+    author_ids_query = """
+        SELECT id 
+        FROM author a
+        """
+    author_page_query = """
+        SELECT * 
+        FROM author a
+        LIMIT {} OFFSET {}
+        """
+    author_query  = """
+        SELECT a.*, t.*, w.name as wine FROM author a
+        JOIN tasting t ON t.author_id = a.id
+        JOIN wine w ON t.wine_id = w.id
+        WHERE a.id = {}
+        """
+    author_count_query = """
+        SELECT COUNT(*) AS count FROM author a
         """
     page_size = 50
 
     def __init__(self, db=SommelierDbConnector()):
         self.db = db
-
-    def get_page(self, pagenum=1):
-        pageparams = self.page_size, self.page_size * (pagenum - 1)
-        self.db.execute(self.wines_page_query.format(*pageparams))
+    
+    def get_rating_data(self):
+        self.db.execute(self.rating_data_query)
         return self.db.fetch_all()
 
-    def get_num_pages(self):
-        self.db.execute(self.wines_count_query)
+    def get_wines(self):
+        self.db.execute(self.wines_query)
+        return self.db.fetch_all()
+
+    def get_wine_ids(self):
+        self.db.execute(self.wine_ids_query)
+        return self.db.fetch_all()
+
+    def get_wine_page(self, pagenum=1):
+        pageparams = self.page_size, self.page_size * (pagenum - 1)
+        self.db.execute(self.wine_page_query.format(*pageparams))
+        return self.db.fetch_all()
+
+    def get_num_wine_pages(self):
+        self.db.execute(self.wine_count_query)
         result = self.db.fetch_one()
         count = float( result['count'] );
         return int( math.ceil( count / self.page_size ) )
@@ -87,38 +117,26 @@ class WineBroker(SommelierBroker):
                 })
         return wine
 
-class AuthorBroker(SommelierBroker):
-
-    authors_query = """
-        SELECT * 
-        FROM author a
-        """
-    authors_page_query = """
-        SELECT * 
-        FROM author a
-        LIMIT {} OFFSET {}
-        """
-    author_query  = """
-        SELECT a.*, t.*, w.name as wine FROM author a
-        JOIN tasting t ON t.author_id = a.id
-        JOIN wine w ON t.wine_id = w.id
-        WHERE a.id = {}
-        """
-    authors_count_query = """
-        SELECT COUNT(*) AS count FROM author a
-        """
-    page_size = 50
-
-    def __init__(self, db=SommelierDbConnector()):
-        self.db = db
-
-    def get_page(self, pagenum=1):
-        pageparams = self.page_size, self.page_size * (pagenum - 1)
-        self.db.execute(self.authors_page_query.format(*pageparams))
+    def get_authors(self):
+        self.db.execute(self.authors_query)
         return self.db.fetch_all()
 
-    def get_num_pages(self):
-        self.db.execute(self.authors_count_query)
+    # returns a vector of ids
+    def get_author_ids(self):
+        self.db.execute(self.author_ids_query)
+        results = self.db.fetch_all()
+        ids = []
+        for row in results:
+            ids.append(row['id'])
+        return ids
+
+    def get_author_page(self, pagenum=1):
+        pageparams = self.page_size, self.page_size * (pagenum - 1)
+        self.db.execute(self.author_page_query.format(*pageparams))
+        return self.db.fetch_all()
+
+    def get_num_author_pages(self):
+        self.db.execute(self.author_count_query)
         result = self.db.fetch_one()
         count = float( result['count'] );
         return int( math.ceil( count / self.page_size ) )
