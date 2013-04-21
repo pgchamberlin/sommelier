@@ -4,7 +4,7 @@ from dbconnector import SommelierDbConnector
 
 class SommelierBroker:
 
-    rating_data_query = """
+    tastings_query = """
         SELECT *
         FROM tasting t
         WHERE author_id <> 0
@@ -67,8 +67,8 @@ class SommelierBroker:
     def __init__(self, db=SommelierDbConnector()):
         self.db = db
     
-    def get_rating_data(self):
-        self.db.execute(self.rating_data_query)
+    def get_tastings(self):
+        self.db.execute(self.tastings_query)
         return self.db.fetch_all()
 
     def get_wines(self):

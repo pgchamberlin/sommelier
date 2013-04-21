@@ -4,7 +4,7 @@
 from flask import request, Response, jsonify, json
 
 # import broker libs that will interface with the DB
-from brokers import SommelierBroker
+from broker import SommelierBroker
 
 # import the Sommelier recommender
 from recommender import Recommender
@@ -54,10 +54,12 @@ class Sommelier:
             'recommendations': recommendations
         })
 
-    def build_sparse_ui_matrix(self):
-        self.recommender.create_sparse_ui_matrix()
-        matrix = self.recommender.load_sparse_ui_matrix()
-        return self.http_success_json({
-            'user_item_matrix': matrix
-        })
+    def build_lists_ui_matrix(self):
+        self.recommender.create_lists_ui_matrix()
+        matrix = self.recommender.load_lists_ui_matrix()
+        return matrix 
+
+    def yeung_factor_matrix(self):
+        matrix = self.recommender.yeung_factor_matrix()
+        return matrix
 

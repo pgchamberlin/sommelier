@@ -7,14 +7,24 @@ import json
 import numpy
 from numpy import random
 
-from brokers import SommelierBroker
+from broker import SommelierBroker
 
 class Recommender:
 
-    lists_ui_matrix_filename = 'ui_matrix_lists.json'
-    factored_ui_matrix_filename = 'ui_matrix_lists_factored.json'
-    tastings_movielens_format_filename = 'tastings_movielends_format.dat'
-    tastings_recsys_svd_filename = 'recsys_svd_data.dat'
+    # filename for user/item matrix in lists format
+    # format: [[1,2,3][4,5,6]..]
+    lists_ui_matrix = 'ui_matrix_lists'
+
+    # filename for factored and reconstructed matrix, using Yeung's simple MF algorithm
+    # format: [[1,2,3][4,5,6]..]
+    yeung_factored_ui_matrix = 'ui_matrix_lists_factored'
+
+    # filename for raw tasting data in format used by MovieLens
+    # format (rows): UserId::ItemId::Rating::UnixTime
+    tastings_movielens_format = 'tastings_movielens_format'
+
+    # filename for python-recsys zip outfile
+    tastings_recsys_svd = 'recsys_svd_data'
 
     def __init__(self, b=SommelierBroker()):
         self.broker = b
@@ -45,7 +55,7 @@ class Recommender:
                     'id': wine['id']
                 })
 
-        return similar_wines
+        return { 'recsys_svd_similar_wines': similar_wines }
 
     def wines_for_author(self, author_id):
         svd = self.load_recsys_svd(k=100, min_values=3, verbose=False)
@@ -71,24 +81,38 @@ class Recommender:
                     'id': wine['id']
                 })
         
-        return recommended_wines
+        return { 'recsys_svd_recommended_wines': recommended_wines }
+
+    # 
+    def load_recsys_svd(self, k=100, min_values=2, recreate=False, verbose=True):
+        import recsys.algorithm
+        if verbose:
+            recsys.algorithm.VERBOSE = True
+
+        from recsys.algorithm.factorize import SVD
+
+        # if there's already an svd file, load it
+        # otherwise create the data from scratch
+        tastings_svd_file = self.file_location(self.tastings_recsys_svd)
+        if recreate == False and os.path.isfile(tastings_svd_file):
+            svd = SVD(self.tastings_recsys_svd)
+        else:
+            svd = self.create_tastings_recsys_svd_data(k=k, min_values=min_values, verbose=verbose)
+
+        # return the recsys SVD object, ready to make some recommendations...
+        return svd
 
     # generate the sparse ui matrix and save it to disk
     def create_lists_ui_matrix(self):
         matrix = self.generate_lists_ui_matrix()
-        self.save_json_file(self.lists_ui_matrix_filename, matrix)
 
     # load the sparse ui matrix from disk
     def load_lists_ui_matrix(self):
-        return self.load_json_file(self.lists_ui_matrix_filename)
-
-    # generates the sparse user-item matrix for authors and wines
-    def generate_sparse_ui_matrix(self):
-        return []
+        return self.load_json_file(self.lists_ui_matrix)
 
     def generate_lists_ui_matrix(self):
         # get all the tastings from the database
-        tastings = self.broker.get_rating_data()
+        tastings = self.broker.get_tastings()
 
         # make a dict with an entry for each author, with wines and ratings:
         # { author: { wine_id: rating, wine_id: rating, ... } ... }
@@ -113,7 +137,10 @@ class Recommender:
                 else:
                     author_vector.append(0.0)
             lists_matrix.append(author_vector)
-        return lists_matrix
+
+        self.save_json_file(self.lists_ui_matrix, matrix)
+
+        return matrix
 
     def data_file_directory(self):
         return "".join([os.getcwd(), '/data/'])
@@ -122,26 +149,19 @@ class Recommender:
         return "".join([self.data_file_directory(), filename])
 
     def save_json_file(self, filename, data):
-        thefile = "".join([self.data_file_directory(), filename])
+        thefile = "".join([self.data_file_directory(), filename, '.json'])
         with open(thefile, 'w') as outfile:
             json.dump(data, outfile)
 
     def load_json_file(self, filename):
-        print "".join(["Loading ", self.data_file_directory(), filename])
+        print "".join(["Loading ", self.data_file_directory(), filename, '.json'])
         return json.loads(open("".join([self.data_file_directory(), filename])).read())
 
     # Copied from Albert Yeung: http://www.quuxlabs.com/wp-content/uploads/2010/09/mf.py_.txt
-    def factor_lists_ui_matrix(self, steps=5000):
+    def yeung_factor_matrix(self, steps=5000):
         print "Loading sparse matrix..."
         R = self.load_lists_ui_matrix()
         print "Done."
-        #R = [
-        #    [5,3,0,1],
-        #    [4,0,0,1],
-        #    [1,1,0,5],
-        #    [1,0,0,4],
-        #    [0,1,5,4],
-        #]
 
         print "Converting to numpy.array()..."
         R = numpy.array(R)
@@ -156,7 +176,7 @@ class Recommender:
         print "Done."
 
         print "Beginning matrix factorization..."
-        nP, nQ = self.matrix_factorization(R, P, Q, K, steps)
+        nP, nQ = self.yeung_matrix_factorization(R, P, Q, K, steps)
         print "Done."
 
         print "Dotting generated matrices..."
@@ -164,13 +184,13 @@ class Recommender:
         print "Done."
 
         print "Saving to JSON file..."
-        self.save_json_file("".join([self.factored_ui_matrix_filename, str(steps)]), nR.tolist())
+        self.save_json_file("".join([self.factored_ui_matrix, str(steps)]), nR.tolist())
         print "Done."
 
         return nR
 
     # Copied from Albert Yeung: http://www.quuxlabs.com/wp-content/uploads/2010/09/mf.py_.txt
-    def matrix_factorization(self, R, P, Q, K, steps=5000, alpha=0.0002, beta=0.02):
+    def yeung_matrix_factorization(self, R, P, Q, K, steps=5000, alpha=0.0002, beta=0.02):
         print "".join(["Matrix Factorization"])
         print "".join(["Steps: ", str(steps)])
         Q = Q.T
@@ -198,14 +218,14 @@ class Recommender:
                 break
         return P, Q.T
 
-    def save_sommelier_tastings_to_movielens_format_file(self):
-        tastings = self.broker.get_rating_data()
+    def save_tastings_to_movielens_format_file(self):
+        tastings = self.broker.get_tastings()
 
         # make a list of strings which will be the lines in our 
         # Movielens format data file. The format is:
         # AuthorId::WineId::Rating::Timestamp
         import time
-        outfile = self.file_location(self.tastings_movielens_format_filename)
+        outfile = self.file_location(self.tastings_movielens_format)
         with open(outfile, 'w') as datafile:
             for tasting in tastings:
                 # if the date is not valid set to 0, otherwise convert to Unix epoch
@@ -221,10 +241,10 @@ class Recommender:
 
     # loads source_file (Movielens format) and performs SVD
     # saving 
-    def create_tastings_recsys_svd_data(self, k=100, min_values=2, verbose=True):
+    def generate_tastings_recsys_svd_data(self, k=100, min_values=2, verbose=True):
         
         # create a data file in Movielens format with the tastings data
-        self.save_sommelier_tastings_to_movielens_format_file()
+        self.save_tastings_to_movielens_format_file()
 
         import recsys.algorithm
         if verbose:
@@ -234,30 +254,11 @@ class Recommender:
         svd = SVD()
 
         # load source data, perform SVD, save to zip file
-        source_file = self.file_location(self.tastings_movielens_format_filename)
+        source_file = self.file_location(self.tastings_movielens_format)
         svd.load_data(filename=source_file, sep='::', format={'col':0, 'row':1, 'value':2, 'ids': int})
 
-        outfile = self.file_location(self.tastings_recsys_svd_filename)
+        outfile = self.file_location(self.tastings_recsys_svd)
         svd.compute(k=k, min_values=min_values, pre_normalize=None, mean_center=True, post_normalize=True, savefile=outfile)
 
-        return svd
-
-    # 
-    def load_recsys_svd(self, k=100, min_values=2, recreate=False, verbose=True):
-        import recsys.algorithm
-        if verbose:
-            recsys.algorithm.VERBOSE = True
-
-        from recsys.algorithm.factorize import SVD
-
-        # if there's already an svd file, load it
-        # otherwise create the data from scratch
-        tastings_svd_file = self.file_location(self.tastings_recsys_svd_filename)
-        if recreate == False and os.path.isfile(tastings_svd_file):
-            svd = SVD(self.tastings_recsys_svd_filename)
-        else:
-            svd = self.create_tastings_recsys_svd_data(k=k, min_values=min_values, verbose=verbose)
-
-        # return the recsys SVD object, ready to make some recommendations...
         return svd
 
