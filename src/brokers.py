@@ -5,16 +5,21 @@ from dbconnector import SommelierDbConnector
 class SommelierBroker:
 
     rating_data_query = """
-        SELECT a.id as author_id, t.rating as rating, w.id as wine_id 
-        FROM author a
-        JOIN tasting t ON t.author_id = a.id
-        JOIN wine w ON t.wine_id = w.id
+        SELECT *
+        FROM tasting t
+        WHERE author_id <> 0
     """
     wine_ids_query = """
         SELECT id 
         FROM wine w
         ORDER BY id ASC
         """
+    wines_by_id_query = """
+        SELECT *
+        FROM wine w
+        WHERE w.id
+        IN ({})
+    """
     wines_query = """
         SELECT * 
         FROM wine w
@@ -72,6 +77,10 @@ class SommelierBroker:
 
     def get_wine_ids(self):
         self.db.execute(self.wine_ids_query)
+        return self.db.fetch_all()
+
+    def get_wines_by_id(self, wine_ids):
+        self.db.execute(self.wines_by_id_query.format(",".join(map(str, wine_ids))))
         return self.db.fetch_all()
 
     def get_wine_page(self, pagenum=1):
