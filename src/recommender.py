@@ -9,15 +9,52 @@ from numpy import random
 
 from broker import SommelierBroker
 
-class Recommender:
+class SommelierRecommender:
 
-    # filename for user/item matrix in lists format
-    # format: [[1,2,3][4,5,6]..]
-    lists_ui_matrix = 'ui_matrix_lists'
+    def __init__(self, b=SommelierBroker(), r=SommelierRecsysSVD()):
+        self.broker = b
+        self.recommender = r
 
-    # filename for factored and reconstructed matrix, using Yeung's simple MF algorithm
-    # format: [[1,2,3][4,5,6]..]
-    yeung_factored_ui_matrix = 'ui_matrix_lists_factored'
+    def wines_for_wine(self, wine_id):
+        self.recommender.wines_for_wine(wine_id)
+
+    def wines_for_author(self, author_id):
+        self.recommender.wines_for_author(wine_id)
+
+# Abstract / interface class to define methods
+# for recommendation provider classes
+class SommelierRecommenderInterface():
+
+    def wines_for_author(self, author_id):
+        return []
+
+    def authors_for_author(self, author_id):
+        return []
+
+    def wines_for_wine(self, item_id):
+        return []
+
+    def impute_to_file(self, tastings):
+        return []
+
+    def data_file_directory(self):
+        return "".join([os.getcwd(), '/data/'])
+
+    def file_location(self, filename):
+        return "".join([self.data_file_directory(), filename])
+
+    def save_json_file(self, filename, data):
+        thefile = "".join([self.data_file_directory(), filename, '.json'])
+        with open(thefile, 'w') as outfile:
+            json.dump(data, outfile)
+
+    def load_json_file(self, filename):
+        print "".join(["Loading ", self.data_file_directory(), filename, '.json'])
+        return json.loads(open("".join([self.data_file_directory(), filename])).read())
+
+# Implements SommelierRecommenderInterface using 
+# python-recsys SVD library to make recommendations
+class SommelierRecsysSVDRecommender(SommelierRecommenderInterface):
 
     # filename for raw tasting data in format used by MovieLens
     # format (rows): UserId::ItemId::Rating::UnixTime
@@ -25,37 +62,6 @@ class Recommender:
 
     # filename for python-recsys zip outfile
     tastings_recsys_svd = 'recsys_svd_data'
-
-    def __init__(self, b=SommelierBroker()):
-        self.broker = b
-
-    def wines_for_wine(self, wine_id):
-        svd = self.load_recsys_svd(k=100, min_values=3, verbose=False)
-
-        # there may not be recommendations for this author, which would
-        # raise a KeyError. We don't want a KeyError, an empty list is fine!
-        try:
-            # get similar wines, but pop() the first item off as it is the current wine
-            recommendations = svd.similar(int(wine_id.encode('ascii')))
-            recommendations.pop(0)
-        except:
-            recommendations = []
-
-        wine_ids = []
-        for recommendation in recommendations:
-            wine_ids.append(recommendation[0])
-
-        similar_wines = []
-        if len(wine_ids) > 0:
-            wines = self.broker.get_wines_by_id(wine_ids)
-            for wine in wines:
-                similar_wines.append({
-                    'name': wine['name'],
-                    'vintage': wine['vintage'],
-                    'id': wine['id']
-                })
-
-        return { 'recsys_svd_similar_wines': similar_wines }
 
     def wines_for_author(self, author_id):
         svd = self.load_recsys_svd(k=100, min_values=3, verbose=False)
@@ -83,6 +89,83 @@ class Recommender:
         
         return { 'recsys_svd_recommended_wines': recommended_wines }
 
+    def authors_for_author(self, author_id):
+        return []
+
+    def wines_for_wine(self, wine_id):
+
+        svd = self.load_recsys_svd(k=100, min_values=3, verbose=False)
+
+        # there may not be recommendations for this author, which would
+        # raise a KeyError. We don't want a KeyError, an empty list is fine!
+        try:
+            # get similar wines, but pop() the first item off as it is the current wine
+            recommendations = svd.similar(int(wine_id.encode('ascii')))
+            recommendations.pop(0)
+        except:
+            recommendations = []
+
+        wine_ids = []
+        for recommendation in recommendations:
+            wine_ids.append(recommendation[0])
+
+        similar_wines = []
+        if len(wine_ids) > 0:
+            wines = self.broker.get_wines_by_id(wine_ids)
+            for wine in wines:
+                similar_wines.append({
+                    'name': wine['name'],
+                    'vintage': wine['vintage'],
+                    'id': wine['id']
+                })
+
+        return { 'recsys_svd_similar_wines': similar_wines }
+
+    # loads source_file (Movielens format) and performs SVD
+    # saving 
+    def impute_to_file(self, tastings):
+        self.generate_tastings_recsys_svd_data(tastings)
+
+    def generate_tastings_recsys_svd_data(self, tastings, k=100, min_values=2, verbose=True):
+        
+        # create a data file in Movielens format with the tastings data
+        self.save_tastings_to_movielens_format_file(tastings)
+
+        import recsys.algorithm
+        if verbose:
+            recsys.algorithm.VERBOSE = True
+
+        from recsys.algorithm.factorize import SVD
+        svd = SVD()
+
+        # load source data, perform SVD, save to zip file
+        source_file = self.file_location(self.tastings_movielens_format)
+        svd.load_data(filename=source_file, sep='::', format={'col':0, 'row':1, 'value':2, 'ids': int})
+
+        outfile = self.file_location(self.tastings_recsys_svd)
+        svd.compute(k=k, min_values=min_values, pre_normalize=None, mean_center=True, post_normalize=True, savefile=outfile)
+
+        return svd
+    
+    def save_tastings_to_movielens_format_file(self, tastings):
+
+        # make a list of strings which will be the lines in our 
+        # Movielens format data file. The format is:
+        # AuthorId::WineId::Rating::Timestamp
+        import time
+        outfile = self.file_location(self.tastings_movielens_format)
+        with open(outfile, 'w') as datafile:
+            for tasting in tastings:
+                # if the date is not valid set to 0, otherwise convert to Unix epoch
+                date = '0'
+                if tasting['tasting_date'] != '0000-00-00 00:00:00':
+                    date = str(time.mktime(time.strptime(tasting['tasting_date'], "%Y-%m-%d %H:%M:%S"))).encode('utf-8')
+                row = "".join([
+                    str(tasting['author_id']).encode('utf-8'), '::', 
+                    str(tasting['wine_id']).encode('utf-8'), '::', 
+                    str(float(tasting['rating'])).encode('utf-8'), '::', 
+                    date, '\n'])
+                datafile.write(row)
     # 
     def load_recsys_svd(self, k=100, min_values=2, recreate=False, verbose=True):
         import recsys.algorithm
@@ -101,6 +184,32 @@ class Recommender:
 
         # return the recsys SVD object, ready to make some recommendations...
         return svd
+
+# Implements SommelierRecommenderInterface using
+# Albert Yeung's example Matrix Factorization code
+# combined with basic CF techniques outlined in
+# Segaran's "Collective Intelligence" (2007, Ch. 2)
+class SommelierYeungMFRecommender(SommelierRecommenderInterface):
+
+    # filename for user/item matrix in lists format
+    # format: [[1,2,3][4,5,6]..]
+    lists_ui_matrix = 'ui_matrix_lists'
+
+    # filename for factored and reconstructed matrix, using Yeung's simple MF algorithm
+    # format: [[1,2,3][4,5,6]..]
+    yeung_factored_ui_matrix = 'ui_matrix_lists_factored'
+
+    def wines_for_author(self, author_id):
+        return []
+
+    def authors_for_author(self, author_id):
+        return []
+
+    def wines_for_wine(self, item_id):
+        return []
+
+    def impute_to_file(self, tastings):
+        return []
 
     # generate the sparse ui matrix and save it to disk
     def create_lists_ui_matrix(self):
@@ -141,21 +250,6 @@ class Recommender:
         self.save_json_file(self.lists_ui_matrix, matrix)
 
         return matrix
-
-    def data_file_directory(self):
-        return "".join([os.getcwd(), '/data/'])
-
-    def file_location(self, filename):
-        return "".join([self.data_file_directory(), filename])
-
-    def save_json_file(self, filename, data):
-        thefile = "".join([self.data_file_directory(), filename, '.json'])
-        with open(thefile, 'w') as outfile:
-            json.dump(data, outfile)
-
-    def load_json_file(self, filename):
-        print "".join(["Loading ", self.data_file_directory(), filename, '.json'])
-        return json.loads(open("".join([self.data_file_directory(), filename])).read())
 
     # Copied from Albert Yeung: http://www.quuxlabs.com/wp-content/uploads/2010/09/mf.py_.txt
     def yeung_factor_matrix(self, steps=5000):
@@ -218,47 +312,27 @@ class Recommender:
                 break
         return P, Q.T
 
-    def save_tastings_to_movielens_format_file(self):
-        tastings = self.broker.get_tastings()
+# Implements SommelierRecommenderInterface performing
+# matrix decomposition based around word frequency to
+# generate topics which can be used to predict similarities
+# between wines based on the language used about them, and
+# between authors based on the language they use. Similar to
+# the techniques outlined by Segaran in "Collective 
+# Intelligence" (2007, Ch. 10), but applied in a different
+# context.
+class SommelierTextMFRecommender(SommelierRecommenderInterface):
 
-        # make a list of strings which will be the lines in our 
-        # Movielens format data file. The format is:
-        # AuthorId::WineId::Rating::Timestamp
-        import time
-        outfile = self.file_location(self.tastings_movielens_format)
-        with open(outfile, 'w') as datafile:
-            for tasting in tastings:
-                # if the date is not valid set to 0, otherwise convert to Unix epoch
-                date = '0'
-                if tasting['tasting_date'] != '0000-00-00 00:00:00':
-                    date = str(time.mktime(time.strptime(tasting['tasting_date'], "%Y-%m-%d %H:%M:%S"))).encode('utf-8')
-                row = "".join([
-                    str(tasting['author_id']).encode('utf-8'), '::', 
-                    str(tasting['wine_id']).encode('utf-8'), '::', 
-                    str(float(tasting['rating'])).encode('utf-8'), '::', 
-                    date, '\n'])
-                datafile.write(row)
+    imputed_data_file = ""
 
-    # loads source_file (Movielens format) and performs SVD
-    # saving 
-    def generate_tastings_recsys_svd_data(self, k=100, min_values=2, verbose=True):
-        
-        # create a data file in Movielens format with the tastings data
-        self.save_tastings_to_movielens_format_file()
+    def wines_for_author(self, author_id):
+        return []
 
-        import recsys.algorithm
-        if verbose:
-            recsys.algorithm.VERBOSE = True
+    def authors_for_author(self, author_id):
+        return []
 
-        from recsys.algorithm.factorize import SVD
-        svd = SVD()
+    def wines_for_wine(self, item_id):
+        return []
 
-        # load source data, perform SVD, save to zip file
-        source_file = self.file_location(self.tastings_movielens_format)
-        svd.load_data(filename=source_file, sep='::', format={'col':0, 'row':1, 'value':2, 'ids': int})
-
-        outfile = self.file_location(self.tastings_recsys_svd)
-        svd.compute(k=k, min_values=min_values, pre_normalize=None, mean_center=True, post_normalize=True, savefile=outfile)
-
-        return svd
+    def impute_to_file(self, tastings):
+        return []
 

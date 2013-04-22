@@ -7,11 +7,11 @@ from flask import request, Response, jsonify, json
 from broker import SommelierBroker
 
 # import the Sommelier recommender
-from recommender import Recommender
+from recommender import SommelierRecommender
 
 class Sommelier:
 
-    def __init__(self, b=SommelierBroker(), r=Recommender()):
+    def __init__(self, b=SommelierBroker(), r=SommelierRecommender()):
         self.broker = b
         self.recommender = r
 
