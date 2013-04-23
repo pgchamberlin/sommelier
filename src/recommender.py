@@ -1,25 +1,21 @@
 #!python
 
+# general
 import os
 import collections
 import json
 
+# text/language processing
+import re
+import nltk
+from nltk.corpus import stopwords
+
+# maths!
 import numpy
 from numpy import random
 
+# Sommelier libs
 from broker import SommelierBroker
-
-class SommelierRecommender:
-
-    def __init__(self, b=SommelierBroker(), r=SommelierRecsysSVD()):
-        self.broker = b
-        self.recommender = r
-
-    def wines_for_wine(self, wine_id):
-        self.recommender.wines_for_wine(wine_id)
-
-    def wines_for_author(self, author_id):
-        self.recommender.wines_for_author(wine_id)
 
 # Abstract / interface class to define methods
 # for recommendation provider classes
@@ -193,11 +189,15 @@ class SommelierYeungMFRecommender(SommelierRecommenderInterface):
 
     # filename for user/item matrix in lists format
     # format: [[1,2,3][4,5,6]..]
-    lists_ui_matrix = 'ui_matrix_lists'
+    original_matrix = "tastings_yeung_matrix"
 
     # filename for factored and reconstructed matrix, using Yeung's simple MF algorithm
     # format: [[1,2,3][4,5,6]..]
-    yeung_factored_ui_matrix = 'ui_matrix_lists_factored'
+    reconstructed_matrix = "reconstructed_yeung_matrix"
+
+    factors_matrix = "imputed_yeung_factors"
+
+    weights_matrix = "imputed_yeung_weights"   
 
     def wines_for_author(self, author_id):
         return []
@@ -217,7 +217,7 @@ class SommelierYeungMFRecommender(SommelierRecommenderInterface):
 
     # load the sparse ui matrix from disk
     def load_lists_ui_matrix(self):
-        return self.load_json_file(self.lists_ui_matrix)
+        return self.load_json_file(self.original_matrix)
 
     def generate_lists_ui_matrix(self):
         # get all the tastings from the database
@@ -247,22 +247,23 @@ class SommelierYeungMFRecommender(SommelierRecommenderInterface):
                     author_vector.append(0.0)
             lists_matrix.append(author_vector)
 
-        self.save_json_file(self.lists_ui_matrix, matrix)
+        self.save_json_file(self.original_matrix, matrix)
 
         return matrix
 
     # Copied from Albert Yeung: http://www.quuxlabs.com/wp-content/uploads/2010/09/mf.py_.txt
-    def yeung_factor_matrix(self, steps=5000):
-        print "Loading sparse matrix..."
-        R = self.load_lists_ui_matrix()
-        print "Done."
+    def yeung_factor_matrix(self, matrix=[], steps=5000, factors=10):
+        if not matrix:
+            print "Loading sparse matrix..."
+            matrix = self.load_lists_ui_matrix()
+            print "Done."
 
         print "Converting to numpy.array()..."
-        R = numpy.array(R)
+        R = numpy.array(matrix)
         print "Done."
         N = len(R)
         M = len(R[0])
-        K = 2
+        K = factors
 
         print "Creating random matrices..."
         P = numpy.random.rand(N, K)
@@ -273,20 +274,24 @@ class SommelierYeungMFRecommender(SommelierRecommenderInterface):
         nP, nQ = self.yeung_matrix_factorization(R, P, Q, K, steps)
         print "Done."
 
+        self.save_json_file(self.factors_matrix, nP.tolist())
+        self.save_json_file(self.weights_matrix, nQ.tolist())
+
         print "Dotting generated matrices..."
         nR = numpy.dot(nP, nQ.T)
         print "Done."
 
         print "Saving to JSON file..."
-        self.save_json_file("".join([self.factored_ui_matrix, str(steps)]), nR.tolist())
+        self.save_json_file("".join([self.reconstructed_matrix, str(steps)]), nR.tolist())
         print "Done."
 
         return nR
 
     # Copied from Albert Yeung: http://www.quuxlabs.com/wp-content/uploads/2010/09/mf.py_.txt
     def yeung_matrix_factorization(self, R, P, Q, K, steps=5000, alpha=0.0002, beta=0.02):
-        print "".join(["Matrix Factorization"])
-        print "".join(["Steps: ", str(steps)])
+        print "Matrix Factorization"
+        print "Steps: %d" % (steps)
+        print "Factors: %d" % (steps)
         Q = Q.T
         s = 0
         for step in xrange(steps):
@@ -320,9 +325,22 @@ class SommelierYeungMFRecommender(SommelierRecommenderInterface):
 # the techniques outlined by Segaran in "Collective 
 # Intelligence" (2007, Ch. 10), but applied in a different
 # context.
-class SommelierTextMFRecommender(SommelierRecommenderInterface):
+class SommelierTextMFRecommender(SommelierYeungMFRecommender):
 
-    imputed_data_file = ""
+    # filename for user/item matrix in lists format
+    # format: [[1,2,3][4,5,6]..]
+    original_matrix = "tastings_text_mf_matrix"
+
+    # filename for factored and reconstructed matrix, using Yeung's simple MF algorithm
+    # format: [[1,2,3][4,5,6]..]
+    reconstructed_matrix = "reconstructed_text_mf_matrix"
+
+    factors_matrix = "imputed_text_mf_factors"
+
+    weights_matrix = "imputed_text_mf_weights"   
+
+    def __init__(self):
+        pass
 
     def wines_for_author(self, author_id):
         return []
@@ -333,6 +351,53 @@ class SommelierTextMFRecommender(SommelierRecommenderInterface):
     def wines_for_wine(self, item_id):
         return []
 
-    def impute_to_file(self, tastings):
-        return []
+    def impute_to_file(self, tastings, steps=5000):
+        matrix = self.get_tastings_word_matrix(tastings)
+        self.save_json_file(self.original_matrix, matrix)
+        self.yeung_factor_matrix(matrix=matrix, steps=steps)
+        return matrix
 
+    # one row for each tasting, one column for each word
+    # with counts of occurrences of the word in the tasting note
+    def get_tastings_word_matrix(self, tastings):
+        words = self.get_words(tastings)
+        rows = []
+        for t in tastings:
+            row = []
+            t_words = re.split('\W+', t['notes'])
+            for w in words:
+                row.append(t_words.count(w))
+            rows.append(row)
+        return rows
+
+    def get_words(self, tastings):
+        words = []
+        dist = self.tastings_frequency_distribution(tastings, min_values=4)
+        for w in dist:
+            words.append(w)
+        return words
+
+    # gets all words metioned >= min_values times, excluding stopwords
+    def tastings_frequency_distribution(self, tastings, min_values=4):
+        words = []
+        for tasting in tastings:
+            words += re.split('\W+', tasting['notes'])
+        filtered_words = [w.lower() for w in words if not w in stopwords.words('english')]
+        dist = nltk.FreqDist(filtered_words)
+        words = dist.samples()
+        for w in words:
+            if dist[w] < min_values:
+                dist.pop(w)
+        return dist
+
+class SommelierRecommender:
+
+    def __init__(self, b=SommelierBroker(), r=SommelierRecsysSVDRecommender()):
+        self.broker = b
+        self.recommender = r
+
+    def wines_for_wine(self, wine_id):
+        self.recommender.wines_for_wine(wine_id)
+
+    def wines_for_author(self, author_id):
+        self.recommender.wines_for_author(wine_id)
