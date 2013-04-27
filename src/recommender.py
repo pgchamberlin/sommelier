@@ -13,13 +13,14 @@ from nltk.corpus import stopwords
 # maths!
 import numpy
 from numpy import random
+import scipy
 
 # Sommelier libs
 from broker import SommelierBroker
 
 # Abstract / interface class to define methods
 # for recommendation provider classes
-class SommelierRecommenderInterface():
+class SommelierRecommender():
 
     def wines_for_author(self, author_id):
         return []
@@ -48,9 +49,106 @@ class SommelierRecommenderInterface():
         print "".join(["Loading ", self.data_file_directory(), filename, '.json'])
         return json.loads(open("".join([self.data_file_directory(), filename])).read())
 
-# Implements SommelierRecommenderInterface using 
+    def preferences_pearson_r(self, preferences, key_a, key_b):
+        # get mutually rated items into two lists of ratings
+        items_a = []
+        items_b = []
+        # iterate over all items
+        for i in range(1, len(preferences[key_a])):
+            # if both a and b have rated the item then add it to their item lists
+            if preferences[key_a][i] != 0 and preferences[key_b][i] != 0:
+                items_a.append(preferences[key_a][i])
+                items_b.append(preferences[key_b][i])
+        if len(items_a) < 3:
+            # no items in common = no correlation
+            # less than 3 items in common = problematic for comparison
+            return 0.0
+        # we now how two lists of ratings for the same items
+        # these can be fed into the scipy.stats pearson r method
+        # we only want the first value [0] from the method as we
+        # don't need the 2-tail p value.
+        # We put through abs() as we aren't interested in direction
+        # of slope, just the absolute similarity.
+        return abs(scipy.stats.pearsonr(items_a, items_b)[0])
+
+# This class implements recommendations largely based on the 
+# basic user-user, user-item and item-item methods
+# detailed by Segaran (2007, Ch.2)
+class SommelierPearsonCFRecommender(SommelierRecommender):
+
+    def __init__(self):
+        self.broker = SommelierBroker()
+
+    # using a weighted average
+    def wines_for_author(self, author_id, max_items=5):
+        totals = {}
+        similarity_sums = {}
+        preferences, wine_ids = self.author_preferences(author_id)
+        subject_preferences = preferences[author_id]
+        for other in preferences.keys():
+            if other == author_id:
+                # don't compare author to themself
+                continue
+            similarity = self.preferences_pearson_r(preferences, author_id, other)
+            if similarity <= 0:
+                # no similarity is a waste of time
+                continue
+            for i in range(0, len(preferences[other])):
+                if preferences[author_id][i] == 0 and preferences[other][i] > 0:
+                    totals.setdefault(i, 0)
+                    totals[i] += preferences[other][i] * similarity
+                    similarity_sums.setdefault(i, 0)
+                    similarity_sums[i] += similarity
+        if not totals:
+            # there are no recommendations to be made :-(
+            return ()
+        rankings = [(total/similarity_sums[item], item) for item, total in totals.items()]
+        sorted_rankings = sorted(rankings, key=lambda sim: sim[0], reverse=True )[0:max_items]
+        recommended_wine_ids = [ wine_ids[i] for r, i in sorted_rankings ]
+        return self.broker.get_wines_by_id(recommended_wine_ids)
+
+    def authors_for_author(self, author_id, max_items=5):
+        preferences, wine_ids = self.author_preferences(author_id)
+        similarities = []
+        for author in preferences.keys():
+            if author == author_id:
+                # we don't need to compare our subject with itself
+                continue
+            similarities.append((author, self.preferences_pearson_r(preferences, author_id, author)))
+        sorted_similarities = sorted(similarities, key=lambda sim: sim[1], reverse=True)
+        return sorted_similarities[0:max_items]
+
+    def author_preferences(self, author_id):
+        preferences = {}
+        wines = {}
+        wines_list = []
+        # get tastings for subject author and others who have rated the same wines
+        # including tastings for wines not rated by the target author
+        tastings = self.broker.get_comparable_author_tastings(author_id)
+        if len(tastings) == 0:
+            # if there aren't any tastings then bail out...
+            return []
+        for tasting in tastings:
+            # tastings should be ordered by author and wine
+            preferences.setdefault(tasting['author_id'], [])
+            wines.setdefault(tasting['wine_id'], {})
+            wines[tasting['wine_id']].setdefault(tasting['author_id'], tasting['rating'])
+        for wine in wines:
+            for author in preferences.keys():
+                if author in wines[wine].keys():
+                    preferences[author].append(wines[wine][author])
+                else:
+                    preferences[author].append(0)
+                wines_list.append(wine)
+        return preferences, wines_list
+
+    def wines_for_wine(self, item_id):
+        return []
+
+
+# Implements SommelierRecommender using 
 # python-recsys SVD library to make recommendations
-class SommelierRecsysSVDRecommender(SommelierRecommenderInterface):
+class SommelierRecsysSVDRecommender(SommelierRecommender):
 
     # filename for raw tasting data in format used by MovieLens
     # format (rows): UserId::ItemId::Rating::UnixTime
@@ -120,6 +218,7 @@ class SommelierRecsysSVDRecommender(SommelierRecommenderInterface):
     # loads source_file (Movielens format) and performs SVD
     # saving 
     def impute_to_file(self, tastings):
+        # svd = self.create_tastings_recsys_svd_data(k=k, min_values=min_values, verbose=verbose)
         self.generate_tastings_recsys_svd_data(tastings)
 
     def generate_tastings_recsys_svd_data(self, tastings, k=100, min_values=2, verbose=True):
@@ -171,21 +270,19 @@ class SommelierRecsysSVDRecommender(SommelierRecommenderInterface):
         from recsys.algorithm.factorize import SVD
 
         # if there's already an svd file, load it
-        # otherwise create the data from scratch
+        svd = []
         tastings_svd_file = self.file_location(self.tastings_recsys_svd)
         if recreate == False and os.path.isfile(tastings_svd_file):
-            svd = SVD(self.tastings_recsys_svd)
-        else:
-            svd = self.create_tastings_recsys_svd_data(k=k, min_values=min_values, verbose=verbose)
+            svd = SVD(tastings_svd_file)
 
         # return the recsys SVD object, ready to make some recommendations...
         return svd
 
-# Implements SommelierRecommenderInterface using
+# Implements SommelierRecommender using
 # Albert Yeung's example Matrix Factorization code
 # combined with basic CF techniques outlined in
 # Segaran's "Collective Intelligence" (2007, Ch. 2)
-class SommelierYeungMFRecommender(SommelierRecommenderInterface):
+class SommelierYeungMFRecommender(SommelierRecommender):
 
     # filename for user/item matrix in lists format
     # format: [[1,2,3][4,5,6]..]
@@ -317,7 +414,7 @@ class SommelierYeungMFRecommender(SommelierRecommenderInterface):
                 break
         return P, Q.T
 
-# Implements SommelierRecommenderInterface performing
+# Implements SommelierRecommender performing
 # matrix decomposition based around word frequency to
 # generate topics which can be used to predict similarities
 # between wines based on the language used about them, and
@@ -400,4 +497,4 @@ class SommelierRecommender:
         self.recommender.wines_for_wine(wine_id)
 
     def wines_for_author(self, author_id):
-        self.recommender.wines_for_author(wine_id)
+        self.recommender.wines_for_author(author_id)

@@ -1,0 +1,40 @@
+>>> from src.recommender import SommelierRecommender, SommelierPearsonCFRecommender
+>>> r = SommelierPearsonCFRecommender()
+>>> r.authors_for_author(1)
+[('14', 0.61321138452833601), ('3', 0.54232614454664041), ('15', 0.50507627227610541), ('11', 0.0), ('10', 0.0)]
+>>> r.authors_for_author(2)
+[]
+>>> r.authors_for_author(3)
+[('1', 0.54232614454664041), ('13', 0.12427395320024001)]
+>>> r.authors_for_author(4)
+[('1', 0.0)]
+>>> r.authors_for_author(5)
+[]
+>>> r.authors_for_author(6)
+[]
+>>> r.authors_for_author(7)
+[]
+>>> r.authors_for_author(8)
+[]
+>>> r.authors_for_author(9)
+[]
+>>> r.authors_for_author(10)
+[('1', 0.0), ('15', 0.0), ('14', 0.0)]
+>>> r.authors_for_author(11)
+[('15', 0.25000000000000011), ('1', 0.0), ('14', 0.0)]
+>>> r.authors_for_author(12)
+[]
+>>> r.authors_for_author(13)
+[('3', 0.12427395320023998)]
+>>> r.authors_for_author(14)
+[('1', 0.61321138452833601), ('15', 0.5388159060803247), ('10', 0.0), ('11', 0.0)]
+>>> r.authors_for_author(15)
+[('14', 0.5388159060803247), ('1', 0.50507627227610541), ('11', 0.25000000000000011), ('10', 0.0)]
+>>> r.authors_for_author(16)
+[]
+>>> r.authors_for_author(17)
+[]
+>>> r.authors_for_author(18)
+[]
+>>> r.authors_for_author(19)
+[('1', 0.0)]

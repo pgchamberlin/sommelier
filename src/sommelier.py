@@ -7,11 +7,11 @@ from flask import request, Response, jsonify, json
 from broker import SommelierBroker
 
 # import the Sommelier recommender
-from recommender import SommelierRecommender
+from recommender import SommelierPearsonCFRecommender
 
 class Sommelier:
 
-    def __init__(self, b=SommelierBroker(), r=SommelierRecommender()):
+    def __init__(self, b=SommelierBroker(), r=SommelierPearsonCFRecommender()):
         self.broker = b
         self.recommender = r
 
@@ -48,10 +48,14 @@ class Sommelier:
 
     def author(self, author_id):
         record = self.broker.get_author(author_id)
-        recommendations = self.recommender.wines_for_author(author_id)
+        wines = self.recommender.wines_for_author(author_id)
+        authors = self.recommender.authors_for_author(author_id)
         return self.http_success_json({
             'author': record,
-            'recommendations': recommendations
+            'recommendations': {
+                'wines': wines,
+                'authors': authors
+            }
         })
 
     def build_lists_ui_matrix(self):

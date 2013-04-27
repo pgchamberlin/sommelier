@@ -62,6 +62,23 @@ class SommelierBroker:
     author_count_query = """
         SELECT COUNT(*) AS count FROM author a
         """
+    # scalability issues w/ multiple sub-queries ?
+    comparable_author_tastings_query = """
+        SELECT t.*, a.*
+        FROM tasting t
+        JOIN author a ON t.author_id = a.id
+        WHERE t.author_id <> 0
+        AND t.author_id IN (
+            SELECT DISTINCT t2.author_id
+            FROM tasting t2
+            WHERE t2.wine_id IN ( 
+                SELECT t3.wine_id 
+                FROM tasting t3 
+                WHERE t3.author_id = {}
+            )
+        )
+        ORDER BY t.author_id ASC, t.wine_id ASC
+    """
     page_size = 50
 
     def __init__(self, db=SommelierDbConnector()):
@@ -172,4 +189,9 @@ class SommelierBroker:
                     'rating': row['rating']
                 })
         return author
+
+    def get_comparable_author_tastings(self, author_id):
+        self.db.execute(self.comparable_author_tastings_query.format(author_id))
+        results = self.db.fetch_all()
+        return results
 

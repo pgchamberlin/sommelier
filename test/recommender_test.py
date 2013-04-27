@@ -2,7 +2,7 @@
 import unittest
 from mock import Mock, MagicMock
 
-from recommender import Recommender
+from recommender import SommelierRecommender
 
 # Tests for the sommelier recommender class
 
@@ -30,7 +30,7 @@ class RecommenderTest(unittest.TestCase):
         mock_broker = MagicMock()
         mock_broker.get_rating_data = MagicMock(return_value=self.dummy_rating_data)
         mock_broker.get_wine_ids = MagicMock(return_value=self.dummy_wine_ids)
-        self.recommender = Recommender(b=mock_broker)
+        self.recommender = SommelierRecommender(b=mock_broker)
  
     def test_generate_sparse_ui_matrix(self):
         generated_matrix = self.recommender.generate_sparse_ui_matrix()
