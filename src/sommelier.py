@@ -9,7 +9,7 @@ from broker import SommelierBroker
 # import the Sommelier recommender
 from recommender import SommelierPearsonCFRecommender
 
-class Sommelier:
+class Sommelier():
 
     def __init__(self, b=SommelierBroker(), r=SommelierPearsonCFRecommender()):
         self.broker = b
@@ -47,6 +47,7 @@ class Sommelier:
         })
 
     def author(self, author_id):
+        author_id = int(author_id)
         record = self.broker.get_author(author_id)
         wines = self.recommender.wines_for_author(author_id)
         authors = self.recommender.authors_for_author(author_id)

@@ -22,6 +22,9 @@ from broker import SommelierBroker
 # for recommendation provider classes
 class SommelierRecommender():
 
+    def __init__(self, b=SommelierBroker()):
+        self.broker = b
+
     def wines_for_author(self, author_id):
         return []
 
@@ -59,7 +62,6 @@ class SommelierRecommender():
             if preferences[key_a][i] != 0 and preferences[key_b][i] != 0:
                 items_a.append(preferences[key_a][i])
                 items_b.append(preferences[key_b][i])
-        return items_a, items_b
         if len(items_a) < 3:
             # no items in common = no correlation
             # less than 3 items in common = problematic for comparison
@@ -75,8 +77,8 @@ class SommelierRecommender():
 # detailed by Segaran (2007, Ch.2)
 class SommelierPearsonCFRecommender(SommelierRecommender):
 
-    def __init__(self):
-        self.broker = SommelierBroker()
+    def __init__(self, b=SommelierBroker()):
+        self.broker = b
 
     # using a weighted average
     def wines_for_author(self, author_id, max_items=5):
@@ -196,6 +198,9 @@ class SommelierRecsysSVDRecommender(SommelierRecommender):
 
     # filename for python-recsys zip outfile
     tastings_recsys_svd = 'recsys_svd_data'
+
+    def __init__(self, b=SommelierBroker()):
+        self.broker = b
 
     def wines_for_author(self, author_id):
         svd = self.load_recsys_svd(k=100, min_values=3, verbose=False)
@@ -336,6 +341,9 @@ class SommelierYeungMFRecommender(SommelierRecommender):
 
     weights_matrix = "imputed_yeung_weights"   
 
+    def __init__(self, b=SommelierBroker()):
+        self.broker = b
+
     def wines_for_author(self, author_id):
         return []
 
@@ -384,9 +392,9 @@ class SommelierYeungMFRecommender(SommelierRecommender):
                     author_vector.append(0.0)
             lists_matrix.append(author_vector)
 
-        self.save_json_file(self.original_matrix, matrix)
+        self.save_json_file(self.original_matrix, lists_matrix)
 
-        return matrix
+        return lists_matrix
 
     # Copied from Albert Yeung: http://www.quuxlabs.com/wp-content/uploads/2010/09/mf.py_.txt
     def yeung_factor_matrix(self, matrix=[], steps=5000, factors=10):
@@ -476,8 +484,8 @@ class SommelierTextMFRecommender(SommelierYeungMFRecommender):
 
     weights_matrix = "imputed_text_mf_weights"   
 
-    def __init__(self):
-        pass
+    def __init__(self, b=SommelierBroker()):
+        self.broker = b
 
     def wines_for_author(self, author_id):
         return []

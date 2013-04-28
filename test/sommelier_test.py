@@ -1,8 +1,7 @@
 #!python
 import unittest
 from mock import Mock, MagicMock
-from brokers import SommelierBroker
-from recommender import Recommender
+import sommelier 
 from sommelier import Sommelier
 
 # Tests for the sommelier class, making sure it returns the right content in the 
@@ -22,6 +21,7 @@ class SommelierTest(unittest.TestCase):
         mock_recommender = MagicMock()
         mock_recommender.wines_for_wine = MagicMock(return_value=['wine','wine','wine'])
         mock_recommender.wines_for_author = MagicMock(return_value=['wine for author','wine','wine'])
+        mock_recommender.authors_for_author = MagicMock(return_value=['authors for author','author','author'])
         self.sommelier = Sommelier(b=mock_broker, r=mock_recommender)
  
     def test_http_success_json(self):
@@ -52,7 +52,7 @@ class SommelierTest(unittest.TestCase):
         self.assertEqual(expected_response_body, response_body)
 
     def test_author(self):
-        expected_response_body = u'{"recommendations": ["wine for author", "wine", "wine"], "author": {"author": "an author"}}'
+        expected_response_body = u'{"recommendations": {"authors": ["authors for author", "author", "author"], "wines": ["wine for author", "wine", "wine"]}, "author": {"author": "an author"}}'
         response_body, keyed_args_dict = self.sommelier.author(123)
         self.assertEqual(expected_response_body, response_body)
 
