@@ -20,7 +20,7 @@ from broker import SommelierBroker
 
 # Abstract / interface class to define methods
 # for recommendation provider classes
-class SommelierRecommender():
+class SommelierRecommender:
 
     def __init__(self, b=SommelierBroker()):
         self.broker = b
@@ -51,110 +51,6 @@ class SommelierRecommender():
     def load_json_file(self, filename):
         print "".join(["Loading ", self.data_file_directory(), filename, '.json'])
         return json.loads(open("".join([self.data_file_directory(), filename])).read())
-
-    def pearson_r(self, preferences, key_a, key_b):
-        # get mutually rated items into two lists of ratings
-        items_a = []
-        items_b = []
-        # iterate over all items
-        for i in range(1, len(preferences[key_a])):
-            # if both a and b have rated the item then add it to their item lists
-            if preferences[key_a][i] != 0 and preferences[key_b][i] != 0:
-                items_a.append(preferences[key_a][i])
-                items_b.append(preferences[key_b][i])
-        if len(items_a) < 3:
-            # no items in common = no correlation
-            # less than 3 items in common = problematic for comparison
-            return 0.0
-        # we now how two lists of ratings for the same items
-        # these can be fed into the scipy.stats pearson r method
-        # we only want the first value [0] from the method as we
-        # don't need the 2-tail p value.
-        return scipy.stats.pearsonr(items_a, items_b)[0]
-
-# This class implements recommendations largely based on the 
-# basic user-user, user-item and item-item methods
-# detailed by Segaran (2007, Ch.2)
-class SommelierPearsonCFRecommender(SommelierRecommender):
-
-    def __init__(self, b=SommelierBroker()):
-        self.broker = b
-
-    # using a weighted average
-    def wines_for_author(self, author_id, max_items=5):
-        totals = {}
-        similarity_sums = {}
-        preferences, wine_ids = self.author_preferences(author_id)
-        subject_preferences = preferences[author_id]
-        for other in preferences.keys():
-            if other == author_id:
-                # don't compare author to themself
-                continue
-            similarity = self.pearson_r(preferences, author_id, other)
-            if similarity <= 0:
-                # no similarity is a waste of time
-                continue
-            for i in range(0, len(preferences[other])):
-                if preferences[author_id][i] == 0 and preferences[other][i] > 0:
-                    totals.setdefault(i, 0)
-                    totals[i] += preferences[other][i] * similarity
-                    similarity_sums.setdefault(i, 0)
-                    similarity_sums[i] += similarity
-        if not totals:
-            # there are no recommendations to be made :-(
-            return ()
-        rankings = [(total/similarity_sums[item], item) for item, total in totals.items()]
-        sorted_rankings = sorted(rankings, key=lambda sim: sim[0], reverse=True )[0:max_items]
-        recommended_wine_ids = [ wine_ids[i] for r, i in sorted_rankings ]
-        return self.broker.get_wines_by_id(recommended_wine_ids)
-
-    def authors_for_author(self, author_id, max_items=5):
-        preferences, wine_ids = self.author_preferences(author_id)
-        similarities = []
-        for author in preferences.keys():
-            if author == author_id:
-                # we don't need to compare our subject with itself
-                continue
-            similarities.append((author, self.pearson_r(preferences, author_id, author)))
-        sorted_similarities = sorted(similarities, key=lambda sim: sim[1], reverse=True)
-        return sorted_similarities[0:max_items]
-
-    def wines_for_wine(self, wine_id, max_items=5):
-        preferences, wine_ids = self.wine_preferences(wine_id)
-        totals = {}
-        similarities = []
-        subject_preferences = preferences[wine_id]
-        for other in preferences.keys():
-            if other == wine_id:
-                # don't compare author to themself
-                continue
-            similarity = self.pearson_r(preferences, wine_id, other)
-            return similarity
-            if similarity <= 0:
-                # no similarity is a waste of time
-                continue
-            for i in range(0, len(preferences[other])):
-                if preferences[wine_id][i] == 0 and preferences[other][i] > 0:
-                    print 'item %d' % (i)
-                    totals.setdefault(i, 0)
-                    totals[i] += preferences[other][i] * similarity
-                    similarity_sums.setdefault(i, 0)
-                    similarity_sums[i] += similarity
-        if not totals:
-            # there are no recommendations to be made :-(
-            return ()
-        rankings = [(total/similarity_sums[item], item) for item, total in totals.items()]
-        sorted_rankings = sorted(rankings, key=lambda sim: sim[0], reverse=True )[0:max_items]
-        recommended_wine_ids = [ wine_ids[i] for r, i in sorted_rankings ]
-        return self.broker.get_wines_by_id(recommended_wine_ids)
-
-    def author_preferences(self, author_id):
-        tastings = self.broker.get_comparable_author_tastings(author_id)
-        return self.preferences(tastings, 'author_id', 'wine_id')
-
-    def wine_preferences(self, wine_id):
-        tastings = self.broker.get_comparable_wine_tastings(wine_id)
-        return self.preferences(tastings, 'wine_id', 'author_id')
 
     # Preferences are returned as a dictionary of indexed lists of ratings, accompanied
     # by a list of column ids which correspond to the ratings lists
@@ -187,6 +83,94 @@ class SommelierPearsonCFRecommender(SommelierRecommender):
                 if column not in column_ids:
                     column_ids.append(column)
         return preferences, column_ids
+
+    def pearson_r(self, preferences, key_a, key_b):
+        # get mutually rated items into two lists of ratings
+        items_a = []
+        items_b = []
+        # iterate over all items
+        for i in range(0, len(preferences[key_a])):
+            # if both a and b have rated the item then add it to their item lists
+            if preferences[key_a][i] != 0 and preferences[key_b][i] != 0:
+                items_a.append(preferences[key_a][i])
+                items_b.append(preferences[key_b][i])
+        if len(set(items_a)) <= 1 or len(set(items_b)) <= 1:
+            # one of the sets has standard deviation of 0 so pearson_r
+            # will be NaN - in this case return 0.0
+            return 0.0
+        if len(items_a) < 3:
+            # no items in common = no correlation
+            # less than 3 items in common = problematic for comparison
+            return 0.0
+        # we now how two lists of ratings for the same items
+        # these can be fed into the scipy.stats pearson r method
+        # we only want the first value [0] from the method as we
+        # don't need the 2-tail p value.
+        return scipy.stats.pearsonr(items_a, items_b)[0]
+
+# This class implements recommendations largely based on the 
+# basic user-user, user-item and item-item methods
+# detailed by Segaran (2007, Ch.2)
+class SommelierPearsonCFRecommender(SommelierRecommender):
+
+    def __init__(self, b=SommelierBroker()):
+        self.broker = b
+
+    # using a weighted average
+    def wines_for_author(self, author_id, max_items=5):
+        preferences, wine_ids = self.author_preferences(author_id)
+        rankings = self.sorted_rankings(author_id, preferences, max_items)
+        recommended_wine_ids = [ wine_ids[i] for r, i in rankings ]
+        return self.broker.get_wines_by_id(recommended_wine_ids)
+
+    def authors_for_author(self, author_id, max_items=5):
+        preferences, wine_ids = self.author_preferences(author_id)
+        similarities = []
+        for author in preferences.keys():
+            if author == author_id:
+                # we don't need to compare our subject with itself
+                continue
+            similarities.append((author, self.pearson_r(preferences, author_id, author)))
+        sorted_similarities = sorted(similarities, key=lambda sim: sim[1], reverse=True)
+        return sorted_similarities[0:max_items]
+
+    def wines_for_wine(self, wine_id, max_items=5):
+        preferences, wine_ids = self.wine_preferences(wine_id)
+        rankings = self.sorted_rankings(wine_id, preferences, max_items=5)
+        recommended_wine_ids = [ wine_ids[i] for r, i in rankings ]
+        return self.broker.get_wines_by_id(recommended_wine_ids)
+
+    def author_preferences(self, author_id):
+        tastings = self.broker.get_comparable_author_tastings(author_id)
+        return self.preferences(tastings, 'author_id', 'wine_id')
+
+    def wine_preferences(self, wine_id):
+        tastings = self.broker.get_comparable_wine_tastings(wine_id)
+        return self.preferences(tastings, 'wine_id', 'author_id')
+
+    def sorted_rankings(self, subject_id, preferences, max_items=5):
+        totals = {}
+        similarity_sums = {}
+        subject_preferences = preferences[subject_id]
+        for other in preferences.keys():
+            if other == subject_id:
+                # don't compare subject to themself
+                continue
+            similarity = self.pearson_r(preferences, subject_id, other)
+            if similarity <= 0:
+                # no similarity is a waste of time
+                continue
+            for i in range(0, len(preferences[other])):
+                if preferences[subject_id][i] == 0 and preferences[other][i] > 0:
+                    totals.setdefault(i, 0)
+                    totals[i] += preferences[other][i] * similarity
+                    similarity_sums.setdefault(i, 0)
+                    similarity_sums[i] += similarity
+        if not totals:
+            # there are no recommendations to be made :-(
+            return ()
+        rankings = [(total/similarity_sums[item], item) for item, total in totals.items()]
+        return sorted(rankings, key=lambda sim: sim[0], reverse=True )[0:max_items]
 
 # Implements SommelierRecommender using 
 # python-recsys SVD library to make recommendations
@@ -535,14 +519,3 @@ class SommelierTextMFRecommender(SommelierYeungMFRecommender):
                 dist.pop(w)
         return dist
 
-class SommelierRecommender:
-
-    def __init__(self, b=SommelierBroker(), r=SommelierRecsysSVDRecommender()):
-        self.broker = b
-        self.recommender = r
-
-    def wines_for_wine(self, wine_id):
-        self.recommender.wines_for_wine(wine_id)
-
-    def wines_for_author(self, author_id):
-        self.recommender.wines_for_author(author_id)
