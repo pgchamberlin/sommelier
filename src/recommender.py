@@ -1,9 +1,15 @@
 #!python
 
+# I load a whole load of dependencies at the top here. 
+# Obviously there is overhead involved in calling in all this stuff
+# but for the sake manageability I'm putting it all up here ;-)
+
 # general
+from __future__ import division
 import os
 import collections
 import json
+import time
 
 # text/language processing
 import re
@@ -14,6 +20,11 @@ from nltk.corpus import stopwords
 import numpy
 from numpy import random
 import scipy
+
+# recsys-svd
+import recsys.algorithm
+from recsys.algorithm.factorize import SVD
+from recsys.evaluation.prediction import MAE, RMSE
 
 # Sommelier libs
 from broker import SommelierBroker
@@ -108,6 +119,40 @@ class SommelierRecommender:
         # don't need the 2-tail p value.
         return scipy.stats.pearsonr(items_a, items_b)[0]
 
+    # Calculates mean absolute error for each row in the matrix
+    # using the MAE() class from python-recsys
+    # python-recsys evaluation documentation:
+    # http://ocelma.net/software/python-recsys/build/html/evaluation.html
+    def evaluate_matrices_mae(self, original_matrix, imputed_matrix):
+        return self.evaluate_matrices(original_matrix, imputed_matrix, evaluator=MAE())
+    
+    def evaluate_matrices_rmse(self, original_matrix, imputed_matrix):
+        return self.evaluate_matrices(original_matrix, imputed_matrix, evaluator=RMSE())
+
+    def recsys_evaluate_matrices(self, original_matrix, imputed_matrix, evaluator=MAE()):
+        total_error = 0
+        total_rows = 0
+        errors = ()
+        for row_i, row in enumerate(original_matrix):
+            # For each row build its list of non-zero values
+            # Build a corresponding list of values for the imputed matrix
+            row_values = []
+            imputed_values = []
+            for col_i, col in enumerate(row):
+                if row[col_i] > 0:
+                    row_values.append(col)
+                    imputed_values.append(imputed_matrix[row_i][col_i])
+            if len(row_values) == 0 or len(imputed_values) == 0:
+                continue
+            evaluator.load_ground_truth(row_values)
+            evaluator.load_test(imputed_values)
+            row_error = evaluator.compute()
+            errors = errors + (row_error, )
+            total_error += row_error
+            total_rows += 1
+        mean_total_error = total_error / total_rows
+        return errors, mean_total_error
+
 # This class implements recommendations largely based on the 
 # basic user-user, user-item and item-item methods
 # detailed by Segaran (2007, Ch.2)
@@ -125,14 +170,7 @@ class SommelierPearsonCFRecommender(SommelierRecommender):
 
     def authors_for_author(self, author_id, max_items=5):
         preferences, wine_ids = self.author_preferences(author_id)
-        similarities = []
-        for author in preferences.keys():
-            if author == author_id:
-                # we don't need to compare our subject with itself
-                continue
-            similarities.append((author, self.pearson_r(preferences, author_id, author)))
-        sorted_similarities = sorted(similarities, key=lambda sim: sim[1], reverse=True)
-        return sorted_similarities[0:max_items]
+        return self.sorted_similarities(author_id, preferences)
 
     def wines_for_wine(self, wine_id, max_items=5):
         preferences, wine_ids = self.wine_preferences(wine_id)
@@ -147,6 +185,19 @@ class SommelierPearsonCFRecommender(SommelierRecommender):
     def wine_preferences(self, wine_id):
         tastings = self.broker.get_comparable_wine_tastings(wine_id)
         return self.preferences(tastings, 'wine_id', 'author_id')
+
+    def sorted_similarities(self, subject_id, preferences, max_items=5):
+        similarities = []
+        for item_id in preferences.keys():
+            if item_id == subject_id:
+                # we don't need to compare our subject with itself
+                continue
+            similarity = self.pearson_r(preferences, subject_id, item_id)
+            # only return positive correlations
+            if similarity > 0:
+                similarities.append((item_id, similarity))
+        sorted_similarities = sorted(similarities, key=lambda sim: sim[1], reverse=True)
+        return sorted_similarities[0:max_items]
 
     def sorted_rankings(self, subject_id, preferences, max_items=5):
         totals = {}
@@ -188,18 +239,15 @@ class SommelierRecsysSVDRecommender(SommelierRecommender):
 
     def wines_for_author(self, author_id):
         svd = self.load_recsys_svd(k=100, min_values=3, verbose=False)
-
         # there may not be recommendations for this author, which would
         # raise a KeyError. We don't want a KeyError, an empty list is fine!
         try:
-            recommendations = svd.recommend(int(author_id.encode('ascii')), is_row=False)
+            recommendations = svd.recommend(int(author_id), is_row=False)
         except:
             recommendations = []
-
         wine_ids = []
         for recommendation in recommendations:
             wine_ids.append(recommendation[0])
-
         recommended_wines = []
         if len(wine_ids) > 0:
             wines = self.broker.get_wines_by_id(wine_ids)
@@ -209,29 +257,24 @@ class SommelierRecsysSVDRecommender(SommelierRecommender):
                     'vintage': wine['vintage'],
                     'id': wine['id']
                 })
-        
-        return { 'recsys_svd_recommended_wines': recommended_wines }
+        return recommended_wines
 
     def authors_for_author(self, author_id):
         return []
 
     def wines_for_wine(self, wine_id):
-
-        svd = self.load_recsys_svd(k=100, min_values=3, verbose=False)
-
+        svd = self.load_recsys_svd()
         # there may not be recommendations for this author, which would
         # raise a KeyError. We don't want a KeyError, an empty list is fine!
         try:
             # get similar wines, but pop() the first item off as it is the current wine
-            recommendations = svd.similar(int(wine_id.encode('ascii')))
+            recommendations = svd.similar(int(wine_id))
             recommendations.pop(0)
         except:
             recommendations = []
-
         wine_ids = []
         for recommendation in recommendations:
             wine_ids.append(recommendation[0])
-
         similar_wines = []
         if len(wine_ids) > 0:
             wines = self.broker.get_wines_by_id(wine_ids)
@@ -241,38 +284,25 @@ class SommelierRecsysSVDRecommender(SommelierRecommender):
                     'vintage': wine['vintage'],
                     'id': wine['id']
                 })
+        return similar_wines
 
-        return { 'recsys_svd_similar_wines': similar_wines }
-
-    # loads source_file (Movielens format) and performs SVD
-    # saving 
-    def impute_to_file(self, tastings):
-        # svd = self.create_tastings_recsys_svd_data(k=k, min_values=min_values, verbose=verbose)
-        self.generate_tastings_recsys_svd_data(tastings)
-
-    def generate_tastings_recsys_svd_data(self, tastings, k=100, min_values=2, verbose=True):
-        
+    # Decomposes the matrix of tastings data using recsys-svd's SVD()
+    # and saves the output matices etc. to a zip file using SVD()'s built-in method
+    def impute_to_file(self, tastings, k=100, min_values=2, verbose=True):
         # create a data file in Movielens format with the tastings data
         self.save_tastings_to_movielens_format_file(tastings)
-
-        import recsys.algorithm
+        # for logging/testing purposes we may like this verbose
         if verbose:
             recsys.algorithm.VERBOSE = True
-
-        from recsys.algorithm.factorize import SVD
         svd = SVD()
-
         # load source data, perform SVD, save to zip file
         source_file = self.file_location(self.tastings_movielens_format)
         svd.load_data(filename=source_file, sep='::', format={'col':0, 'row':1, 'value':2, 'ids': int})
-
         outfile = self.file_location(self.tastings_recsys_svd)
         svd.compute(k=k, min_values=min_values, pre_normalize=None, mean_center=True, post_normalize=True, savefile=outfile)
-
         return svd
     
     def save_tastings_to_movielens_format_file(self, tastings):
-
         # make a list of strings which will be the lines in our 
         # Movielens format data file. The format is:
         # AuthorId::WineId::Rating::Timestamp
@@ -290,20 +320,16 @@ class SommelierRecsysSVDRecommender(SommelierRecommender):
                     str(float(tasting['rating'])).encode('utf-8'), '::', 
                     date, '\n'])
                 datafile.write(row)
-    # 
-    def load_recsys_svd(self, k=100, min_values=2, recreate=False, verbose=True):
-        import recsys.algorithm
-        if verbose:
-            recsys.algorithm.VERBOSE = True
 
+    # loads a recsys-svd data file stored to disk by the impute_to_file() method
+    def load_recsys_svd(self):
         from recsys.algorithm.factorize import SVD
-
-        # if there's already an svd file, load it
         svd = []
+        # if there's an svd file, load it - otherwise we're out of luck as
+        # we don't want to build these matrices at runtime!
         tastings_svd_file = self.file_location(self.tastings_recsys_svd)
         if recreate == False and os.path.isfile(tastings_svd_file):
             svd = SVD(tastings_svd_file)
-
         # return the recsys SVD object, ready to make some recommendations...
         return svd
 
@@ -319,11 +345,13 @@ class SommelierYeungMFRecommender(SommelierRecommender):
 
     # filename for factored and reconstructed matrix, using Yeung's simple MF algorithm
     # format: [[1,2,3][4,5,6]..]
-    reconstructed_matrix = "reconstructed_yeung_matrix"
+    reconstructed_matrix = "reconstructed_yeung_matrix_k{}_steps{}"
 
-    factors_matrix = "imputed_yeung_factors"
+    factors_matrix = "imputed_yeung_factors_k{}_steps{}"
 
-    weights_matrix = "imputed_yeung_weights"   
+    weights_matrix = "imputed_yeung_weights_k{}_steps{}"   
+
+    multiple_factorization_metas = "multiple_factorization_metas_k{}_steps{}"   
 
     def __init__(self, b=SommelierBroker()):
         self.broker = b
@@ -338,30 +366,26 @@ class SommelierYeungMFRecommender(SommelierRecommender):
         return []
 
     def impute_to_file(self, tastings):
+        matrix = self.generate_lists_ui_matrix(tastings)
+        factored_matrix = self.yeung_factor_matrix(matrix, steps=100, factors=10, evaluator='MAE')[0]
         return []
-
-    # generate the sparse ui matrix and save it to disk
-    def create_lists_ui_matrix(self):
-        matrix = self.generate_lists_ui_matrix()
 
     # load the sparse ui matrix from disk
     def load_lists_ui_matrix(self):
         return self.load_json_file(self.original_matrix)
 
-    def generate_lists_ui_matrix(self):
-        # get all the tastings from the database
-        tastings = self.broker.get_tastings()
-
+    def generate_lists_ui_matrix(self, tastings={}):
+        if not tastings:
+            # get all the tastings from the database
+            tastings = self.broker.get_tastings()
         # make a dict with an entry for each author, with wines and ratings:
         # { author: { wine_id: rating, wine_id: rating, ... } ... }
         author_ratings = {}
         for tasting in tastings:
             author_ratings.setdefault(tasting['author_id'], {})
             author_ratings[tasting['author_id']][tasting['wine_id']] = tasting['rating']
-
         # now get all the wine ids
         wines = self.broker.get_wine_ids()
-
         # for each author iterate over wines and make a tuple with ratings for each wine, or 0.0
         lists_matrix = []
         for item in author_ratings:
@@ -375,58 +399,53 @@ class SommelierYeungMFRecommender(SommelierRecommender):
                 else:
                     author_vector.append(0.0)
             lists_matrix.append(author_vector)
-
         self.save_json_file(self.original_matrix, lists_matrix)
-
         return lists_matrix
 
     # Copied from Albert Yeung: http://www.quuxlabs.com/wp-content/uploads/2010/09/mf.py_.txt
-    def yeung_factor_matrix(self, matrix=[], steps=5000, factors=10):
+    # This method factors the given matrix into
+    def yeung_factor_matrix(self, matrix=[], steps=5000, factors=10, evaluator=MAE()):
         if not matrix:
             print "Loading sparse matrix..."
             matrix = self.load_lists_ui_matrix()
             print "Done."
-
         print "Converting to numpy.array()..."
         R = numpy.array(matrix)
         print "Done."
         N = len(R)
         M = len(R[0])
         K = factors
-
         print "Creating random matrices..."
         P = numpy.random.rand(N, K)
         Q = numpy.random.rand(M, K)
         print "Done."
-
         print "Beginning matrix factorization..."
-        nP, nQ = self.yeung_matrix_factorization(R, P, Q, K, steps)
+        nP, nQ, e = self.yeung_matrix_factorization(R, P, Q, K, steps)
         print "Done."
-
-        self.save_json_file(self.factors_matrix, nP.tolist())
-        self.save_json_file(self.weights_matrix, nQ.tolist())
-
+        print "Final error: {}".format(e)
+        self.save_json_file(self.factors_matrix.format(K, steps), nP.tolist())
+        self.save_json_file(self.weights_matrix.format(K, steps), nQ.tolist())
         print "Dotting generated matrices..."
         nR = numpy.dot(nP, nQ.T)
         print "Done."
-
+        print "Evaluation using {}...".format(evaluator.__class__.__name__)
+        errors, mean_total_error = self.recsys_evaluate_matrices(R, nR, evaluator)
+        print "Mean total error: {}".format(mean_total_error)
         print "Saving to JSON file..."
-        self.save_json_file("".join([self.reconstructed_matrix, str(steps)]), nR.tolist())
+        self.save_json_file(self.reconstructed_matrix.format(K, steps), nR.tolist())
         print "Done."
-
-        return nR
+        return nR, nP, nQ, errors, mean_total_error
 
     # Copied from Albert Yeung: http://www.quuxlabs.com/wp-content/uploads/2010/09/mf.py_.txt
     def yeung_matrix_factorization(self, R, P, Q, K, steps=5000, alpha=0.0002, beta=0.02):
         print "Matrix Factorization"
-        print "Steps: %d" % (steps)
-        print "Factors: %d" % (steps)
+        print "Steps: {}".format(steps)
+        print "Factors: {}".format(K)
         Q = Q.T
         s = 0
         for step in xrange(steps):
             s+=1
-            print "Step %d / %d" % (s,steps)
-        
+            print "Step {} / {}".format(s,steps)
             for i in xrange(len(R)):
                 for j in xrange(len(R[i])):
                     if R[i][j] > 0:
@@ -442,9 +461,26 @@ class SommelierYeungMFRecommender(SommelierRecommender):
                         e = e + pow(R[i][j] - numpy.dot(P[i,:],Q[:,j]), 2)
                         for k in xrange(K):
                             e = e + (beta/2) * ( pow(P[i][k],2) + pow(Q[k][j],2) )
+            print "Error: {}".format(e)
             if e < 0.001:
                 break
-        return P, Q.T
+        return P, Q.T, e
+
+    # Will run any number of Yeung factorizations of a matrix, iterating over 
+    # a list of configuration argument dicts to be passed to the factorization method
+    def multiple_factorizations(self, matrix, config_args):
+        metas = []
+        for args in config_args:
+            start = int(time.time())
+            fm = self.yeung_factor_matrix(matrix, **args)
+            end = int(time.time())
+            # get metas from result
+            ue = fm[3]
+            te = fm[4]
+            t = end - start
+            metas.append({"args": args, "user_errors": ue, "total_errors": te, "execution_time_seconds": t})
+            self.save_json_file(self.multiple_factorization_metas.format(args["factors"], args["steps"]), metas)
+        return metas
 
 # Implements SommelierRecommender performing
 # matrix decomposition based around word frequency to

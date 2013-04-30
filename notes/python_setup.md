@@ -29,3 +29,5 @@ Install dependencies:
     cd python-recsys
     ../flask/bin/python setup.py install
 
+    # install matplotlib for graphing test results
+    flask/bin/pip install matplotlib

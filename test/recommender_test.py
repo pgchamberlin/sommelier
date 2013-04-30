@@ -53,13 +53,13 @@ class RecommenderTest(unittest.TestCase):
 
         # row 4 has a standard deviation of 0, which we need to deal with to avoid a division by zero error
         # when the covariance is divided by the product of the standard deviations
-        # in this case I will return 0.0, on the basis that a user submitting the same rating every time has not
-        # expressed any preference at all, so I might as well assume their pearson r to be 0
+        # in this case the method returns 0.0, on the basis that a user submitting the same rating for every 
+        # item is not expressing any preference at all, so a neutral similarity score is appropriate
         self.assertEqual(0.0, self.recommender.pearson_r(self.pearson_r_test_preferences, 'row_1', 'row_4'))
 
         # cases where there are two or less items for comparison are problematic for pearson_r; any two
         # lists with 2 items will always result in either 1.0 or -1.0. That is not a useful score, as
-        # there may be no similarity in the ratings at all. We return 0.0 if there are < 3 items
+        # there may be no similarity in the ratings at all, so we return 0.0 if there are < 3 items
         self.assertEqual(0.0, self.recommender.pearson_r(self.pearson_r_test_preferences, 'row_5', 'row_6'))
 
     def test_preferences(self):
@@ -74,19 +74,35 @@ class RecommenderTest(unittest.TestCase):
 #
 class PearsonCFRecommenderTest(unittest.TestCase):
 
-    # user 1 has 3 tastings in common with the others (0, 1 and 2). The others have all rated items 3 and 4 where
-    # user 1 has not. Items 3 and 4 have been given identical rankings by the other users (3 and 4 respectively) ...
-    sorted_rankings_args = ( 1, { 1: [ 1, 2, 3, 0, 0 ], 2: [ 1, 2, 3, 3, 4 ], 3: [ 2, 3, 4, 3, 4 ], 4: [ 1, 2, 5, 3, 4 ] } )
-
-    # ... so the recommendations should be 4.0 for item 4 and 3.0 for item 3, with item 4 first in the list
-    sorted_rankings_expected = [(4.0, 4), (3.0, 3)]
-
     def setUp(self):
         mock_broker = MagicMock()
         self.recommender = SommelierPearsonCFRecommender(b=mock_broker)
 
+    # test args for both sorted_rankings and sorted_similarities
+    # these consist of an id and a dict of user preferences of the format: { id: [ list, of, ratings ] }
+    # In this test data user 1 has 3 ratings in common with the others, the first three (0, 1 and 2). 
+    # Users 2, 3 and 4 have each rated the last two items (3 and 4), whereas user 1 has not.
+    # Items 3 and 4 have been given identical rankings by users 2, 3 and 4 ...
+    test_args = ( 1, { 1: [ 1, 2, 3, 0, 0 ], 2: [ 1, 2, 3, 3, 4 ], 3: [ 3, 2, 1, 3, 4 ], 4: [ 1, 2, 3, 3, 4 ] } )
+
+    # ... so the rankings should be 4.0 for item 4 and 3.0 for item 3, with item 4 first in the list
+    # as it has the higher rating
+    sorted_rankings_expected = [(4.0, 4), (3.0, 3)]
+
+    # covers recommender.sorted_rankings
     def test_sorted_rankings(self):
-        self.assertEqual(self.sorted_rankings_expected, self.recommender.sorted_rankings(*self.sorted_rankings_args))
+        self.assertEqual(self.sorted_rankings_expected, self.recommender.sorted_rankings(*self.test_args))
+
+    # We can use the same arguments from above to test the sorted_similarities() method
+    # this method will look at the pearson score for each of the users. The ratings in this
+    # case are loaded so that users 2 and 4 have identical ratings as 1, so will be recommended
+    # in that order. User 3 has inverse ratings to user 1, so they will score -1.0 and not
+    # be returned by the method
+    sorted_similarities_expected = [(2, 1.0), (4, 1.0)]
+
+    # covers recommender.sorted_similarities
+    def test_sorted_similarities(self):
+        self.assertEqual(self.sorted_similarities_expected, self.recommender.sorted_similarities(*self.test_args))
 
 class YeungMFRecommenderTest(unittest.TestCase):
 
@@ -117,11 +133,4 @@ class YeungMFRecommenderTest(unittest.TestCase):
     def test_generate_lists_ui_matrix(self):
         generated_matrix = self.recommender.generate_lists_ui_matrix()
         self.assertEqual(self.expected_lists_matrix, generated_matrix)
-
-    def test_create_lists_ui_matrix(self):
-        self.recommender.generate_lists_ui_matrix = MagicMock()
-        self.recommender.save_json_file = MagicMock()
-        self.recommender.create_lists_ui_matrix()
-        self.recommender.generate_lists_ui_matrix.assert_called_once()
-        self.recommender.save_json_file.assert_called_once()
 
