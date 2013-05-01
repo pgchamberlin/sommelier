@@ -10,6 +10,8 @@ import os
 import collections
 import json
 import time
+import random
+import math
 
 # text/language processing
 import re
@@ -343,6 +345,10 @@ class SommelierYeungMFRecommender(SommelierRecommender):
     # format: [[1,2,3][4,5,6]..]
     original_matrix = "tastings_yeung_matrix"
 
+    # filename for user/item matrix in lists format
+    # format: [[1,2,3][4,5,6]..]
+    test_data_matrix = "tastings_yeung_test_matrix_{}percent"
+
     # filename for factored and reconstructed matrix, using Yeung's simple MF algorithm
     # format: [[1,2,3][4,5,6]..]
     reconstructed_matrix = "reconstructed_yeung_matrix_k{}_steps{}"
@@ -366,15 +372,19 @@ class SommelierYeungMFRecommender(SommelierRecommender):
         return []
 
     def impute_to_file(self, tastings):
-        matrix = self.generate_lists_ui_matrix(tastings)
+        matrix = self.generate_lists_ui_matrix(tastings, self.original_matrix)
         factored_matrix = self.yeung_factor_matrix(matrix, steps=100, factors=10, evaluator='MAE')[0]
         return []
 
     # load the sparse ui matrix from disk
     def load_lists_ui_matrix(self):
-        return self.load_json_file(self.original_matrix)
+        matrix_data = self.load_json_file(self.original_matrix)
+        matrix = matrix_data["ratings"]
+        author_ids = matrix_data["author_ids"]
+        wine_ids = matrix_data["wine_ids"]
+        return matrix, author_ids, wine_ids
 
-    def generate_lists_ui_matrix(self, tastings={}):
+    def generate_lists_ui_matrix(self, tastings={}, outfile=''):
         if not tastings:
             # get all the tastings from the database
             tastings = self.broker.get_tastings()
@@ -388,64 +398,59 @@ class SommelierYeungMFRecommender(SommelierRecommender):
         wines = self.broker.get_wine_ids()
         # for each author iterate over wines and make a tuple with ratings for each wine, or 0.0
         lists_matrix = []
-        for item in author_ratings:
-            author = author_ratings[item]
-            author_vector = []
+        wine_ids = []
+        author_ids = []
+        for author_id in author_ratings:
+            author = author_ratings[author_id]
+            author_ids.append(author_id)
+            author_list = []
             for wine in wines:
+                wine_ids.append(wine['id'])
                 # if there is a key in the author dict for this wine, take the rating from that
                 if wine['id'] in author:
-                    author_vector.append(float(author[wine['id']]))
+                    author_list.append(float(author[wine['id']]))
                 # otherwise append a 0.0
                 else:
-                    author_vector.append(0.0)
-            lists_matrix.append(author_vector)
-        self.save_json_file(self.original_matrix, lists_matrix)
-        return lists_matrix
+                    author_list.append(0.0)
+            lists_matrix.append(author_list)
+        if outfile:
+            self.save_json_file(outfile, { "ratings": lists_matrix, "author_ids": author_ids, "wine_ids": wine_ids })
+        return lists_matrix, author_ids, wine_ids
 
     # Copied from Albert Yeung: http://www.quuxlabs.com/wp-content/uploads/2010/09/mf.py_.txt
     # This method factors the given matrix into
-    def yeung_factor_matrix(self, matrix=[], steps=5000, factors=10, evaluator=MAE()):
+    def yeung_factor_matrix(self, matrix=[], steps=5000, factors=10, evaluator=MAE(), verbose=True):
         if not matrix:
-            print "Loading sparse matrix..."
             matrix = self.load_lists_ui_matrix()
-            print "Done."
-        print "Converting to numpy.array()..."
         R = numpy.array(matrix)
-        print "Done."
         N = len(R)
         M = len(R[0])
         K = factors
-        print "Creating random matrices..."
         P = numpy.random.rand(N, K)
         Q = numpy.random.rand(M, K)
-        print "Done."
-        print "Beginning matrix factorization..."
-        nP, nQ, e = self.yeung_matrix_factorization(R, P, Q, K, steps)
-        print "Done."
-        print "Final error: {}".format(e)
+        nP, nQ, e = self.yeung_matrix_factorization(R, P, Q, K, steps, verbose=verbose)
+        if verbose: print "Final error: {}".format(e)
         self.save_json_file(self.factors_matrix.format(K, steps), nP.tolist())
         self.save_json_file(self.weights_matrix.format(K, steps), nQ.tolist())
-        print "Dotting generated matrices..."
         nR = numpy.dot(nP, nQ.T)
-        print "Done."
-        print "Evaluation using {}...".format(evaluator.__class__.__name__)
-        errors, mean_total_error = self.recsys_evaluate_matrices(R, nR, evaluator)
-        print "Mean total error: {}".format(mean_total_error)
-        print "Saving to JSON file..."
+        if verbose: print "Saving to JSON file..."
         self.save_json_file(self.reconstructed_matrix.format(K, steps), nR.tolist())
-        print "Done."
+        if verbose: print "Evaluation using {}...".format(evaluator.__class__.__name__)
+        errors, mean_total_error = self.recsys_evaluate_matrices(R, nR, evaluator)
+        if verbose: print "Mean total error: {}".format(mean_total_error)
         return nR, nP, nQ, errors, mean_total_error
 
     # Copied from Albert Yeung: http://www.quuxlabs.com/wp-content/uploads/2010/09/mf.py_.txt
-    def yeung_matrix_factorization(self, R, P, Q, K, steps=5000, alpha=0.0002, beta=0.02):
-        print "Matrix Factorization"
-        print "Steps: {}".format(steps)
-        print "Factors: {}".format(K)
+    def yeung_matrix_factorization(self, R, P, Q, K, steps=5000, alpha=0.0002, beta=0.02, verbose=True):
+        if verbose:
+            print "Matrix Factorization"
+            print "Steps: {}".format(steps)
+            print "Factors: {}".format(K)
         Q = Q.T
         s = 0
         for step in xrange(steps):
             s+=1
-            print "Step {} / {}".format(s,steps)
+            if verbose: print "Step {} / {}".format(s,steps)
             for i in xrange(len(R)):
                 for j in xrange(len(R[i])):
                     if R[i][j] > 0:
@@ -461,7 +466,7 @@ class SommelierYeungMFRecommender(SommelierRecommender):
                         e = e + pow(R[i][j] - numpy.dot(P[i,:],Q[:,j]), 2)
                         for k in xrange(K):
                             e = e + (beta/2) * ( pow(P[i][k],2) + pow(Q[k][j],2) )
-            print "Error: {}".format(e)
+            if verbose: print "Error: {}".format(e)
             if e < 0.001:
                 break
         return P, Q.T, e
@@ -481,6 +486,90 @@ class SommelierYeungMFRecommender(SommelierRecommender):
             metas.append({"args": args, "user_errors": ue, "total_errors": te, "execution_time_seconds": t})
             self.save_json_file(self.multiple_factorization_metas.format(args["factors"], args["steps"]), metas)
         return metas
+
+    def predict(self, imputed_matrix, authors, wines, author_id, wine_id):
+        if author_id in authors:
+            author_idx = authors.index(author_id)
+            if wine_id in wines:
+                wine_idx = wines.index(wine_id)
+                if author_idx < len(imputed_matrix):
+                    if wine_idx < len(imputed_matrix[author_idx]):
+                        return imputed_matrix[author_idx][wine_idx]
+        print author_id
+        print wine_id
+        print authors.index(author_id)
+        print wines.index(wine_id)
+        print len(imputed_matrix)
+        print len(imputed_matrix[author_idx])
+        print imputed_matrix[author_idx][wine_idx]
+
+    # Get all tastings, randomly split into train and test portions
+    # Generate a matrix for the test portion of the data
+    # Factor this matrix using the **config_args passed into the method
+    # Iterate over the training portion of the data, checking the
+    # real ratings against those imputed by the factorization
+    # Record MAE for each author, standard deviation of error for 
+    # each author, total MAE, total standard deviation of error, 
+    # and finally a normalised MAE for good measure...
+    def split_data_evaluation(self, config_args, percent_train=80):
+        print "Test/train split: {}/{}".format(percent_train, 100-percent_train)
+        tastings = self.broker.get_tastings()
+        train_tastings, test_tastings = self.split_train_test_tastings(tastings, percent_train)
+        train_matrix, author_ids, wine_ids = self.generate_lists_ui_matrix(train_tastings, self.test_data_matrix)
+        for args in config_args:
+            print "Evaluation for args: {}".format(args)
+            imputed_matrix = self.yeung_factor_matrix(train_matrix, **args)[0]
+            total_error = 0.0
+            num_tastings = 0
+            errors = []
+            author_errors = {}
+            for tasting in test_tastings:
+                if tasting["author_id"] not in author_ids:
+                    # there were no items for this author in the test data
+                    continue
+                prediction = self.predict(imputed_matrix, author_ids, wine_ids, tasting["author_id"], tasting["wine_id"])
+                rating = float(tasting['rating'])
+                error = abs(rating - prediction)
+                author_errors.setdefault(tasting['author_id'], [])
+                author_errors[tasting['author_id']].append(error)
+                errors.append(error)
+                total_error += error
+                num_tastings += 1
+            author_stds = {}
+            for author_id in author_errors:
+                # author standard deviation
+                author_stds.setdefault(author_id, 0.0)
+                author_stds[author_id] = numpy.std(author_errors[author_id])
+            mae = total_error / num_tastings
+            # we can get the mae as a normalised value (between 0 and 1) by dividing by the difference between the
+            # highest and lowest rating which we know is (5 - 0) = 5
+            nmae = mae / 5
+            # total standard deviation
+            total_std = numpy.std(errors)
+            print "NMAE {}".format(nmae)
+            print "MAE {}".format(mae)
+            print "Total SD {}".format(total_std)
+            print "Author SDs {}".format(author_stds)
+
+    def split_train_test_tastings(self, tastings, percent_train=80):
+        if percent_train > 100:
+            raise Exception("percent_test must be 100 or less")
+        num_tastings = len(tastings)
+        num_train = math.ceil(num_tastings * ( percent_train / 100 ))
+        # now create an array of length num_tastings, with num_test amount of 1s
+        # randomly distributed within it
+        ones = numpy.ones((num_train)).tolist()
+        zeros = numpy.zeros((num_tastings - num_train)).tolist()
+        ones_and_zeros = ones + zeros
+        random.shuffle(ones_and_zeros)
+        test_tastings = []
+        train_tastings = []
+        for tasting in tastings:
+            if ones_and_zeros.pop() == 1:
+                train_tastings.append(tasting)
+            else:
+                test_tastings.append(tasting)
+        return train_tastings, test_tastings 
 
 # Implements SommelierRecommender performing
 # matrix decomposition based around word frequency to

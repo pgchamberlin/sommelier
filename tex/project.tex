@@ -1,19 +1,5 @@
-\title{A Social Recommender System For Wines}
+\documentclass[a4paper,12pt,titlepage]{article}
 
-\iffalse
-Page 1: Title Page – including the title of the project, the name of the author, the
-date, the word count and the statement specified below under report details.
-\fi
-
-\author{
-    Undergraduate Project by Peter Chamberlin \\
-    BSc Information Systems and Management \\
-    Department of Computer Science\\
-    Birkbeck, University of London\\
-}
-\date{\today}
-
-\documentclass[12pt]{article}
 % custom paragraph to have line break after using mbox to hack :-/
 \newcommand{\myparagraph}[1]{\paragraph{#1}\mbox{}\\}
 
@@ -25,7 +11,12 @@ date, the word count and the statement specified below under report details.
 
 \begin{document}
 
-\maketitle
+\iffalse
+Page 1: Title Page – including the title of the project, the name of the author, the
+date, the word count and the statement specified below under report details.
+\fi
+
+\include{title}
 
 \include{abstract}
 

@@ -4,51 +4,29 @@ Chapter 1: Introduction - the topic, the background, why the topic is relevant o
 
 \section{Introduction}
 
-\myparagraph{Recommender Systems.}
+\subsection{Online Recommender Systems}
 
 Since their origin in the mid-1990s with systems such as Tapestry \cite{Goldberg92} and GroupLens \cite{Resnick94}, recommender systems have become ubiquitous on the World Wide Web, being employed by some of the worlds largest online businesses as core parts of their offering.
 
-It is the growth of the Web, which is now ubiquitous itself, that has given companies the ability to draw on unprecedented amounts of data about their users' preferences. At the same time the Web has made it easier than ever to reach their users with tailored suggestions.
+The growth of the Web has given companies the ability to gather unprecedented amounts of data about their users' preferences, both explicitly collected and inferred from their behaviour, while at the same time enabling them to reach users for less cost more often than ever before.
 
-Amazon's system of product recommendations using item-to-item collaborative filtering is regarded as a ``killer feature''\cite{Fortune12}, and is one of the defining features of the Amazon brand experience. Amazon state their mission to be, ``to delight our customers by allowing them to serendipitously discover great products''\cite{Fortune12}.
+Amazon's system of product recommendations using item-to-item collaborative filtering is regarded as a ``killer feature''\cite{Fortune12}, and is one of the defining features of the Amazon website. The importance of recommendations to Amazon is reflected in their stated mission, ``to delight our customers by allowing them to serendipitously discover great products''\cite{Fortune12}.
 
-Netflix's movie recommender system \emph{Cinematch}  ``Netflix Prize'' competition 
+Another company which, like Amazon, is synonymous with recommender systems is Netflix, an ``Internet television network'' \cite{NetflixAbout}. In October 2006 Netflix launched ``The Netflix Prize'', a competition with a \$1,000,000 Grand Prize on offer for any team which could beat their own Cinematch recommender system by ``at least 10\%'' accuracy over a fixed set of data \cite{NetflixPrizeRules}. In 2009 the prize was awarded to the BellKor's Pragmatic Chaos team, who had improved on Netflix's own system by 10.06\% \cite{NetflixPrizeCom}. 
 
+As well as online stores using recommender systems to recommend products a user might be interested in, there are systems \ldots
 
-\myparagraph{Social Recommender Systems.}
+\subsection{Aims and Objectives}
 
-In recent years social applications have dominated the Web. Networks like Facebook and Twitter have become massive global businesses as Internet users share more and more of their lives online. In such a context recommender systems are able to look beyond users' relationships to product and services, being able instead to interrogate qualitative data about the relationships between specific people. Facebook describe this as the ``social graph''.
+My interest in recommender systems is founded in their variety and ubiquity. It occurred to me that I encounter, and am the subject of, dozens of these systems in my everyday life. Whether it's Twitter or Facebook recommending interesting interesting people or content to me, Amazon recommending me a book or film, or even a supermarket targeting special offers to me, I interact with recommender systems all the time. I am fascinated both by how these systems work theoretically and by how they are implementated in practice. As such the core objective of my project is to implement a recommender system for a web or mobile application.
 
-CITATIONS NEEDED!
+I have kindly been permitted to freely use data from Decanter.com's wine reviews database \cite{DecanterWine} for my project. The sphere of wine recommendations is particularly interesting; wine is at first glance a narrow subject, but it is a nuanced one. Among oenophiles there is an emphasis on personal taste and a strong tradition of rating and grading. 
 
-These systems, ``a class of recommender systems that target the social media domain''\cite{Guy11}, represent the current state of the art. 
+In this project I aim to build a recommender system based on Decanter.com's wine database, identifying and overcoming the challenges associated with the implementation of a real-world recommender system.
 
-\myparagraph{Recommending Wines.}
+The most important aspect of any recommender system may be considered to be the quality of its recommendations, and I intend to focus very strongly on recommendation quality. Nevertheless I do not want to overlook the practical implementation of the system. I aim to produce a system satisfactory in both its recommendations and its performance as a web service, with a robust and elegant implementation in code. 
 
-Recommender systems for wines are not a new idea, being typical of the kind of item many systems are designed to recommend. Burke developed the VintageExchange FindMe recommender system in 1999\cite{Burke99}, and there is at least one patent pending with the WIPO for a wine recommender system\cite{WIPO12}.
+I will not build any kind of graphical interface for the system, but will instead provide a machine readable API, and where necessary batch scripts and command line tools for preparing and manipulating data.
 
-As a knowledge-based recommender, Burke's FindMe system, ``required approximately one person-month of knowledge engineering effort''\cite{Burke99b}.
-
-The Tetherless World Wine Agent (TWWA), by Patton and McGuinness\cite{Patton}. The TWWA project is primarily concerned with knowledge representaion and the Semantic Web, presenting a common and collaborative ontology for wine with which users can share wine recommendations across their social networks\cite{TWWAIndex}. The system does not automatically tailor recommendations to users, although this is stated as a target for future work\cite{TWWAIndex}.
-
-\myparagraph{Service Oriented Architecture.}
-
-I have chosen to implement my system as a service, such 
-
-\myparagraph{Aims and Objectives.}
-
-I aim to produce a recommender system for wines which takes advantage of both ratings and tasting notes to suggest the most interesting wines and users. I intend the system to ignore wine attributes, such as grape variety and colour, preferring to make recommendations based on a hybrid of pure collaborative filtering and a content-based filtering approach using user-submitted and expert tasting notes.
-
-Rather than implement a full graphical interface for the system I have chosen to develop an HTTP API.
-
-In doing so I will explore the field of recommender systems, 
-
-Why are these systems interesting - Benefits - Challenges
-
-Typical applications...  - Movies - Products (i.e. Amazon)
-
-Applications in wine domain - what's the same - what's different
-
-What will this project do?  - implement a recommender system for wines -
-exploration of techniques etc.
+I aim to satisfy several of the most common use cases for wine recommendation, including user-item, item-item and user-user recommendations.
 

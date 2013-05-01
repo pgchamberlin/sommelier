@@ -1,6 +1,6 @@
-\section{The Sommelier System}\label{design}
+\section{System}\label{design}
 
-\myparagraph{Data Cleanup}
+\subsection{Data Cleanup}
 
 !!! Priorities: retain as many ratings and notes as possible. Don't worry about attributes.
 
@@ -10,7 +10,7 @@ The original database is highly inconsistent, displaying a mixture of design app
 
 Nevertheless I considered there to be a great deal of useful and interesting information in the database, with it to contain usable ratings and/or tastings for over 33,000 wines.
 
-\myparagraph{The Decanter Database}
+\subsection{The Decanter Database}
 
 \begin{figure}[h!]
     \caption{Decanter.com Database}
@@ -21,7 +21,7 @@ Nevertheless I considered there to be a great deal of useful and interesting inf
 
 In the original database the WineInfo table is a mixture of foreign keys joining to very small tables, such as WineInfo.type\_id joining to WineType.id where WineType is a table with only two attributes. This approach, stiving for a high degree of normalisation, contrasts with the fact that the same table also has the attribute second\_wine, as a string which only holds data in 450 of the 38762 entries in the table.
 
-\myparagraph{Creating The Sommelier Dataset}
+\subsection{Creating The Sommelier Dataset}
 
 \begin{figure}[h!]
     \caption{Sommelier Database}
@@ -40,7 +40,7 @@ The WineType table was ignored because no wines corresponded to it; no WineInfo.
 
 The TasterRating and TastingId tables were discarded because they only referenced 1158 of the records in Tasting, too small a proportion of the Tasting table to make it worthwhile migrating them into the dataset.
 
-\myparagraph{The Author Problem}
+\subsection{The Author Problem}
 
 The biggest shortcoming of the dataset is that the author of a tasting note is often not recorded. The number of wines with notes and known authors is only 1401, with there being 18 named authors on the system. 
 
@@ -106,7 +106,7 @@ Having analysed the dataset and conceived an ideal schema, I needed to decide wh
 
 Given that the purpose of the dataset is social recommendations, the first decision I made was to discard any wines without both tasting notes and a rating, whether.
 
-\myparagraph{Making Recommendations}
+\subsection{Making Recommendations}
 
 Wine attributes, vintage, grape variety, region etc., are of limited use for making recommendations. Take a user who has rated a red Bordeaux wine highly. It is not interesting to that user for a system to simply recommend them other highly-rated red Bordeaux wines, which is what a system will do if it looks for items with similar attributes. It is likely that any drinker who enjoys Bordeaux wines will recognise that such wines are of a type, with geography, grape varieties and production processes in common. Thus the user will be capable of ``recommending'' Bordeaux wines to themselves, and will not have very much difficulty sourcing ones which are highly rated. They do not need a recommender system for that.
 
@@ -138,7 +138,7 @@ TODO appendix of data
 
 2. select a.name, count( t.id ) from author a join tasting t on a.id = t.author\_id where 0 < ( select count(*) from tasting t2 where t2.wine\_id = t.wine\_id and t2.author\_id = {N} ) group by a.id; 
 
-\myparagraph{Experimentation}
+\subsection{Experimentation}
 
 In Chapter 2 of Collective Intelligence\cite{Segaran02}, Segaran details basic methods for user- and item-based collaborative filtering. Following the guidelines from this chapter I recreated Segaran's recommendation methods and applied them to my dataset.
 
@@ -171,7 +171,7 @@ from lib import recommendations
 authorsims = recommendations.getAuthorSimilarities()
 
 
-\myparagraph{Implementation}
+\subsection{Implementation}
 
 \begin{figure}[h!]
     \caption{Sommelier Class Diagram}
@@ -181,6 +181,8 @@ authorsims = recommendations.getAuthorSimilarities()
 \end{figure}
 
 Having so few wines tasted by more than one author in the dataset, and even fewer tasted by more than two, it was clear that my system needed to cope extremely well with sparsity. Su et al. \cite{SuImputed} show their \ldots
+
+!!! Would have been quixotic to attempt a complex approach involving text mining of tasting notes without first attempting to approximate the state of the art in imputation of preferences using matrix factorization, or a Bayesian approach\ldots
 
 !!! I decided firstly to imitate Su et al.'s \cite{SuImputed} IDN-CF (eBMI) method (imputed densest neighbours collaborative filtering using extended Bayesian multiple imputation). This approach has been shown to mitigate the problem of sparsity, requiring very few neighbours to obtain its best recommendations compared to other methods. 
 
