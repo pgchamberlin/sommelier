@@ -3,19 +3,14 @@ from src.recommender import SommelierYeungMFRecommender, SommelierRecommender
 y = SommelierYeungMFRecommender()
 y.split_data_evaluation([
     {"steps":1000,  "factors":10, "verbose":False},
-    {"steps":2000,  "factors":10, "verbose":False},
-    {"steps":3000,  "factors":10, "verbose":False},
-])
+], percent_train=95)
 y.split_data_evaluation([
     {"steps":1000,  "factors":10, "verbose":False},
-    {"steps":2000,  "factors":10, "verbose":False},
-    {"steps":3000,  "factors":10, "verbose":False},
-])
+], percent_train=90)
 y.split_data_evaluation([
     {"steps":1000,  "factors":10, "verbose":False},
-    {"steps":2000,  "factors":10, "verbose":False},
-    {"steps":3000,  "factors":10, "verbose":False},
-])
+], percent_train=85)
+
 """
 Test/train split: 90/10
 Evaluation for args: {'steps': 50, 'verbose': False, 'factors': 8}

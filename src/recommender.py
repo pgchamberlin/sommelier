@@ -97,6 +97,48 @@ class SommelierRecommender:
                     column_ids.append(column)
         return preferences, column_ids
 
+    # Open a given file which is in Movielens format
+    # and convert to tastings as used by Sommelier
+    def load_movielens_to_tastings(self, filename):
+        tastings = []
+        print "Loading Movielens data... (this may take a while)"
+        for line in open("".join([self.data_file_directory(), filename]), 'r'):
+            tastings.append(self.movielens_line_to_tasting(line))
+        print "Done."
+        return tastings
+            
+    # Converts a live from a Movielens file (as a string)
+    # to a tasting dict. This is for use in benchmarking and
+    # evaluation so that Movielens data can be used to 
+    # test the system. Movielens file format:
+    # UserId::ItemId::Rating::Timestamp
+    def movielens_line_to_tasting(self, line):
+        user_id, item_id, rating, timestamp = line.split('\t')
+        tasting = {
+            'author_id': int(user_id),
+            'wine_id': int(item_id),
+            'rating': int(rating),
+            'tasting_date': str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(timestamp))))
+        }
+        return tasting   
+
+    def tastings_to_movielens_format(self, tastings):
+        # make a list of strings which will be the lines in our 
+        # Movielens format data file. The format is:
+        # AuthorId::WineId::Rating::Timestamp
+        lines = []
+        for tasting in tastings:
+            # if the date is not valid set to 0, otherwise convert to Unix epoch
+            date = '0'
+            if tasting['tasting_date'] != '0000-00-00 00:00:00':
+                date = str(time.mktime(time.strptime(tasting['tasting_date'], "%Y-%m-%d %H:%M:%S"))).encode('utf-8')
+            lines.append("".join([
+                str(tasting['author_id']).encode('utf-8'), '::', 
+                str(tasting['wine_id']).encode('utf-8'), '::', 
+                str(float(tasting['rating'])).encode('utf-8'), '::', 
+                date, '\n']))
+        return lines
+
     def pearson_r(self, preferences, key_a, key_b):
         # get mutually rated items into two lists of ratings
         items_a = []
@@ -152,7 +194,9 @@ class SommelierRecommender:
             errors = errors + (row_error, )
             total_error += row_error
             total_rows += 1
-        mean_total_error = total_error / total_rows
+        mean_total_error = 0.0
+        if total_rows > 0.0:
+            mean_total_error = total_error / total_rows
         return errors, mean_total_error
 
 # This class implements recommendations largely based on the 
@@ -303,25 +347,13 @@ class SommelierRecsysSVDRecommender(SommelierRecommender):
         outfile = self.file_location(self.tastings_recsys_svd)
         svd.compute(k=k, min_values=min_values, pre_normalize=None, mean_center=True, post_normalize=True, savefile=outfile)
         return svd
-    
+
     def save_tastings_to_movielens_format_file(self, tastings):
-        # make a list of strings which will be the lines in our 
-        # Movielens format data file. The format is:
-        # AuthorId::WineId::Rating::Timestamp
-        import time
+        movielens_lines = self.tastings_to_movielens_format(tastings)
         outfile = self.file_location(self.tastings_movielens_format)
         with open(outfile, 'w') as datafile:
-            for tasting in tastings:
-                # if the date is not valid set to 0, otherwise convert to Unix epoch
-                date = '0'
-                if tasting['tasting_date'] != '0000-00-00 00:00:00':
-                    date = str(time.mktime(time.strptime(tasting['tasting_date'], "%Y-%m-%d %H:%M:%S"))).encode('utf-8')
-                row = "".join([
-                    str(tasting['author_id']).encode('utf-8'), '::', 
-                    str(tasting['wine_id']).encode('utf-8'), '::', 
-                    str(float(tasting['rating'])).encode('utf-8'), '::', 
-                    date, '\n'])
-                datafile.write(row)
+            for line in movielens_lines:
+                datafile.write(line)
 
     # loads a recsys-svd data file stored to disk by the impute_to_file() method
     def load_recsys_svd(self):
@@ -373,7 +405,7 @@ class SommelierYeungMFRecommender(SommelierRecommender):
 
     def impute_to_file(self, tastings):
         matrix = self.generate_lists_ui_matrix(tastings, self.original_matrix)
-        factored_matrix = self.yeung_factor_matrix(matrix, steps=100, factors=10, evaluator='MAE')[0]
+        factored_matrix = self.yeung_factor_matrix(matrix, steps=1000, factors=10, evaluator='MAE')[0]
         return []
 
     # load the sparse ui matrix from disk
@@ -391,28 +423,27 @@ class SommelierYeungMFRecommender(SommelierRecommender):
         # make a dict with an entry for each author, with wines and ratings:
         # { author: { wine_id: rating, wine_id: rating, ... } ... }
         author_ratings = {}
+        wine_ids = []
         for tasting in tastings:
             author_ratings.setdefault(tasting['author_id'], {})
             author_ratings[tasting['author_id']][tasting['wine_id']] = tasting['rating']
-        # now get all the wine ids
-        wines = self.broker.get_wine_ids()
+            if tasting['wine_id'] not in wine_ids:
+                wine_ids.append(tasting['wine_id'])
         # for each author iterate over wines and make a tuple with ratings for each wine, or 0.0
         lists_matrix = []
-        wine_ids = []
         author_ids = []
         for author_id in author_ratings:
             author = author_ratings[author_id]
             author_ids.append(author_id)
-            author_list = []
-            for wine in wines:
-                wine_ids.append(wine['id'])
+            author_wine_list = []
+            for wine_id in wine_ids:
                 # if there is a key in the author dict for this wine, take the rating from that
-                if wine['id'] in author:
-                    author_list.append(float(author[wine['id']]))
+                if wine_id in author:
+                    author_wine_list.append(float(author[wine_id]))
                 # otherwise append a 0.0
                 else:
-                    author_list.append(0.0)
-            lists_matrix.append(author_list)
+                    author_wine_list.append(0.0)
+            lists_matrix.append(author_wine_list)
         if outfile:
             self.save_json_file(outfile, { "ratings": lists_matrix, "author_ids": author_ids, "wine_ids": wine_ids })
         return lists_matrix, author_ids, wine_ids
@@ -474,6 +505,8 @@ class SommelierYeungMFRecommender(SommelierRecommender):
     # Will run any number of Yeung factorizations of a matrix, iterating over 
     # a list of configuration argument dicts to be passed to the factorization method
     def multiple_factorizations(self, matrix, config_args):
+        sparsity = self.sparsity_percent(matrix)
+        print "Sparsity of matrix for multiple factorizations: {}%".format(sparsity)
         metas = []
         for args in config_args:
             start = int(time.time())
@@ -511,11 +544,14 @@ class SommelierYeungMFRecommender(SommelierRecommender):
     # Record MAE for each author, standard deviation of error for 
     # each author, total MAE, total standard deviation of error, 
     # and finally a normalised MAE for good measure...
-    def split_data_evaluation(self, config_args, percent_train=80):
+    def split_data_evaluation(self, config_args, matrix_file=[], tastings=[], percent_train=80):
         print "Test/train split: {}/{}".format(percent_train, 100-percent_train)
-        tastings = self.broker.get_tastings()
+        print "Randomly splitting tastings for testing..."
         train_tastings, test_tastings = self.split_train_test_tastings(tastings, percent_train)
+        print "Generating matrix for testing..."
         train_matrix, author_ids, wine_ids = self.generate_lists_ui_matrix(train_tastings, self.test_data_matrix)
+        print "num authors {}".format(len(train_matrix))
+        print "num items {}".format(len(train_matrix[0]))
         for args in config_args:
             print "Evaluation for args: {}".format(args)
             imputed_matrix = self.yeung_factor_matrix(train_matrix, **args)[0]
@@ -523,9 +559,16 @@ class SommelierYeungMFRecommender(SommelierRecommender):
             num_tastings = 0
             errors = []
             author_errors = {}
+            missing_authors = 0
+            missing_wines = 0
             for tasting in test_tastings:
                 if tasting["author_id"] not in author_ids:
                     # there were no items for this author in the test data
+                    missing_authors +=1
+                    continue
+                if tasting["wine_id"] not in wine_ids:
+                    # there were no items for this wine in the test data
+                    missing_wines += 1
                     continue
                 prediction = self.predict(imputed_matrix, author_ids, wine_ids, tasting["author_id"], tasting["wine_id"])
                 rating = float(tasting['rating'])
@@ -535,6 +578,7 @@ class SommelierYeungMFRecommender(SommelierRecommender):
                 errors.append(error)
                 total_error += error
                 num_tastings += 1
+            print "Missing authors: {}, missing wines: {}".format(missing_authors, missing_wines)
             author_stds = {}
             for author_id in author_errors:
                 # author standard deviation
@@ -550,6 +594,11 @@ class SommelierYeungMFRecommender(SommelierRecommender):
             print "MAE {}".format(mae)
             print "Total SD {}".format(total_std)
             print "Author SDs {}".format(author_stds)
+
+    def split_data_evaluate_movielens_file(self, filepath, config_args, percent_train=80):
+        tastings = self.load_movielens_to_tastings(filepath)
+        print "Number of tastings: {}".format(len(tastings))
+        self.split_data_evaluation(config_args, tastings=tastings, percent_train=percent_train)
 
     def split_train_test_tastings(self, tastings, percent_train=80):
         if percent_train > 100:
@@ -570,6 +619,18 @@ class SommelierYeungMFRecommender(SommelierRecommender):
             else:
                 test_tastings.append(tasting)
         return train_tastings, test_tastings 
+
+    def sparsity_percent(self, matrix):
+        zero_count = 0.0
+        total_count = 0.0
+        for row in matrix:
+            for col in row:
+                total_count += 1.0
+                if col == 0.0:
+                    zero_count += 1.0
+        return ( zero_count / total_count ) * 100.0
+
+## UNIMPLEMENTED
 
 # Implements SommelierRecommender performing
 # matrix decomposition based around word frequency to
