@@ -10,7 +10,8 @@ sommelier = Sommelier()
 
 @app.route('/')
 def sommelier_index():
-    return "index"
+    response_body, keyed_args_dict = sommelier.index()
+    return Response(response_body, **keyed_args_dict)
 
 @app.route('/wines', defaults = {'page_num': 1}, methods = ['GET'])
 @app.route('/wines/<int:page_num>', methods = ['GET'])

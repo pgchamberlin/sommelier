@@ -1,5 +1,11 @@
 # Using MySQLdb
 
+## MySQL
+
+    CREATE USER 'sommelier'@'localhost' IDENTIFIED BY 'vinorosso';
+    GRANT ALL ON wine.* TO 'sommelier'@'localhost';
+
+## MySQLdb docs
 Using MySQLdb:
 
     import MySQLdb

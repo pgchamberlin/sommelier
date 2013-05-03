@@ -1,55 +1,71 @@
 \section{System}\label{design}
 
-\subsection{Data Cleanup}
+\subsection{Development Environment}
 
-The data source I have used for my project is the wines database belonging to Decanter.com\cite{DecanterCom}. The database contains nearly 40,000 professional ratings and tasting notes for wines from as far back as 1986, featuring vintages as far back as 1917.
+I have developed my project to run on a Linux platform, and have used version 12.04 of the Ubuntu operating system during the system's development (Ubuntu, 2013 \cite{Ubuntu12LTS}). Interaction with the system is via the standard terminal. Appendix \ref{app:installation} details installation instructions for the necessary software packages and libraries for the project. The instructions assume the user is using an Internet-connected computer running a recent version of the Ubuntu operating system (v12.04 or above).
 
-The original database is highly inconsistent, displaying a mixture of design approaches and a variable quality of data. This is consistent with the fact that the database has been developed over a long period of time by a number of different developers with varying levels of skill, and that wine journalists making entries into the database have taken a number of idiosyncratic approaches to data entry.
+System-level software requirements include:
 
-Nevertheless I considered there to be a great deal of useful and interesting information in the database, with it to contain usable ratings and/or tastings for over 33,000 wines.
+\begin{itemize}
+    \item MySQL v5.5, Python v2.7, Virtualenv, NumPy, SciPy
+\end{itemize}
 
-\subsection{The Decanter Database}
+Other dependencies are installed locally to the project.
+
+\subsection{Data Migration}
+
+\subsubsection{The Original Decanter Wines Database}
 
 \begin{figure}[h!]
-    \caption{Decanter.com Database}
+    \caption{Wines Database Represented as UML Class Diagram}
     \centering
         \includegraphics[width=14cm]{DecanterWineDB}
     \label{fig:decanterdb}
 \end{figure}
 
-In the original database the WineInfo table is a mixture of foreign keys joining to very small tables, such as WineInfo.type\_id joining to WineType.id where WineType is a table with only two attributes. This approach, stiving for a high degree of normalisation, contrasts with the fact that the same table also has the attribute second\_wine, as a string which only holds data in 450 of the 38762 entries in the table.
+The data source I have used for my project is the wines database belonging to Decanter.com \cite{DecanterWine}. The database contains nearly 40,000 professional ratings and tasting notes for wines from as far back as 1986, featuring vintages as far back as 1917.
 
-\subsection{Creating The Sommelier Dataset}
+I had hoped that the data would be fairly usable as it was received, as the data is currently used on the Decanter.com website, but on examination it was clear that there would be quite a lot of work to do in order to repurpose the data for my system.
+
+I have modelled the database as a class diagram (Figure \ref{fig:decanterdb}). This diagram represents the 16 tables in the original database, the columns present in those tables, and the relationships between them.
+
+One thing immediately apparent about the database is that there are circular relationship between some of the tables. For example, the table WineInfo contains foreign key fields for both WineStyleNarrow and WineStyle, but it is the case that a association with WineStyleNarrow already encompasses an association with WineStyle, via WineStyleNarrow's association with WineStyleBroad, which associates with WineStyle. Duplicating the association in this way makes the database difficult to maintain as there is a dependency between the two foreign keys style\_id and style\_narrow\_id on the WineInfo table which means that both must be updated any time that one is. There is a similar situation between the keys appellation\_id and producer\_id in the same table.
+
+In addition to unnecessary duplication of associations in the WineInfo table there are foreign keys for missing, or unidentifiable, tables: classification\_id, chart\_id and dominant\_id. It is likely that these keys relate to tables removed from the database at one time or other.
+
+The WineInfo table is a mixture of foreign keys joining to very small tables, such as type\_id joining to WineType, where WineType is a table holding only a single non-key field. This approach, of factoring out any non-integer fields to separate tables, is inconsistent with the fact that the same table also has several text fields, including second\_wine and tracker\_teaser. second\_wine only holds data in 450 of the 38762 entries in the table, and is an empty string by default in all others.
+
+The problems with the database structure are consistent with the fact that the database has been developed over a long period of time in an ad hoc fashion. There have probably been many different developers, and the database, being many years old, has probably supported many incarnations of Decanter's website.
+
+Despite the problems with the database I considered there to be a great deal of useful and interesting information in the database, with it to contain usable ratings and/or tastings for over 33,000 wines, but decided that it would be best to port it to a much more simple schema, and to strip out as much redundant data as possible, for the purposes of my project.
+
+\subsubsection{The Cleaned-up Sommelier Development Database}
 
 \begin{figure}[h!]
-    \caption{Sommelier Database}
+    \caption{Sommelier Database Represented as UML Class Diagram}
     \centering
-        \includegraphics[width=7cm]{SommelierDBSimple}
+        \includegraphics[width=10cm]{SommelierDBSimple}
     \label{fig:sommelierdb}
 \end{figure}
 
-For the new Sommelier database, Figure \ref{fig:sommelierdb}, I decided to denormalise [explanation/citation needed!] the wine data. This enables the data to be queried with fewer joins, maximising the simplicity and execution speed of the queries [citation needed] used for data access. Denormalization makes data integrity more difficult to maintain however, as there are potentially a large number of records to update for any change in a duplicated value. In this case an appellation or sub-region name changing might require thousands of records to be amended. Creating and editing wines is not a requirement of my system though, so for the purposes of this project the wine and tasting data is static and will not be subject to updates. For this reason the duplication of data within the Wine records is not problematic. In a real world setting this issue may need to be revisited.
+For the new Sommelier database (Figure \ref{fig:sommelierdb}), I decided to minimise the complexity of the data, denormalizing the tables to make querying it as simple as possible. This would make updates to the data more complex, as any update to a field shared among many wines, for example a producer's name, would need to be replicated across a high number of records. As I did not intend to perform any writes on the data as part of my project I felt able to overlook this shortcoming of the design. If this system were to be applied in the real world, then there may be a need to refactor the database so that updates may be made more easily. 
 
-Much of the data from the original database was disregarded entirely.
+As can be seen in Figure \ref{fig:sommelierdb}, I disregarded entirely much of the data from the original database. In many cases this was because I did not feel the data would be beneficial to my system. The Recommendations and RecommendationsGroup tables, for example, may have been useful, but the data in the tables was often incomplete and I did not reckon them to enrich the tasting notes enough to warrant migration. The fact that belonging to a certain group of recommendations may be used to infer similarities between wines seemed a tenuous reason to retain data in my development database.
 
-The tables WineStyleNarrow and WineStyleBroad contained generic text descriptions for wine (``rich and creamy'', ``crisp and tangy'' etc.). I initially considered this to have potential for migration into tag data which I could reuse as part of my filtering. Unfortunately less than 6435 of the records in WineInfo had non-null values for their style\_narrow\_id field, and only 3397 of these had corresponding records in the Tasting table. This figure was only around 10\% of the number of wines I expected the Sommelier database to contain so I decided that the WineStyle* tables were probably not worthwhile to migrate.
+The tables WineStyleNarrow and WineStyleBroad contained generic text descriptions for wine, such as ``rich and creamy'' and ``crisp and tangy''. I initially considered this to have potential for migration into tag data which I could reuse as part of my filtering. Unfortunately less than 6435 of the records in WineInfo had non-null values for their `style\_narrow\_id` field, and only 3397 of these had corresponding records in the Tasting table. This figure was only around 10\% of the number of wines I expected the Sommelier database to contain so I decided that the WineStyleNarrow and WineStyleBroad tables were not worth migrating.
 
-The WineType table was ignored because no wines corresponded to it; no WineInfo.type\_id record matched any WineType.id.
+The WineType table was ignored because no wines corresponded to it, there were values for `type\_id` in some WineInfo records, but none of those values corresponded with values in the `id` field in WineType.
 
-The TasterRating and TastingId tables were discarded because they only referenced 1158 of the records in Tasting, too small a proportion of the Tasting table to make it worthwhile migrating them into the dataset.
+Whatever the situation with the data in other tables, it was clear that the Tastings table would need to be at the centre of my system, as it is where user, item and rating are associated. Those are the core data points for most recommender systems, so I resolved that I would migrate all tastings which had both their `notes` and `rating` field populated, along with the associated authors and wines, to a new database using my simplified schema.
 
-\subsection{The Author Problem}
-
-The biggest shortcoming of the dataset is that the author of a tasting note is often not recorded. The number of wines with notes and known authors is only 1401, with there being 18 named authors on the system. 
-
-Table \ref{table:authors} shows the distribution of tastings amongst authors, only 5 of which have tasted and rated more than 100 wines in the database.
+\subsubsection{The Author Problem}
 
 \begin{table}[ht]
-    \caption{Authors of tasting notes and ratings}
+    \caption{Number of wines rated by each author}
     \centering
     \begin{tabular}{c c c}
         \\\hline\hline
-        Author               & Wines tasted & Wines also tasted by another
+        Author               & Wines tasted & Wines also tasted by other authors
         \\\hline
         Amy Wislocki         &           28 & 1  \\
         Andrew Jefford       &          105 & 38 \\
@@ -94,54 +110,20 @@ Table \ref{table:authors} shows the distribution of tastings amongst authors, on
     \label{table:authormatrix}
 \end{table}
 
-In some cases an author's initials or full name are recorded within the text of a tasting note. I decided that extracting and making use of these was impractical given the time constraints of this project.
+The biggest shortcoming of the dataset is that the author of a tasting note is often not recorded. The number of tastings with known authors is only 1411, with there being only 18 named authors on the system. There are 25812 tastings with no author associated. I had reckoned on there being a much higher number of wine tastings with identifiable authors, given that each note and rating was always by a particular person. It appeared that this information had either not been entered, or had been lost.
 
-DESCRIBE DATA SETS BEFORE AND AFTER
+Table \ref{table:authors} shows the distribution of tastings amongst authors, only 5 of which have tasted and rated more than 100 wines in the database. The table also shows how many of the wines tasted by each author have also been tasted and rated by other authors. Table \ref{table:authormatrix} shows the number of wines tasted in common for each of the authors (authors who have not tasted any wines in common with another author are omitted). It is clear that the data is extremely sparse. When migrating the data I was careful to ensure that I maintained all author to tasting associations, but rather than an oversight during migration, this shortcoming is inherent in the data. 
 
-THE SOMMELIER DATASET
+Measuring sparsity as the percentage of empty values in a matrix \textbf{M} of size $\vert \textit{A} \vert \times \vert \textit{W} \vert$, where \textit{A} is the vector of authors and \textit{W} is the vector of wines, we find that the database is 94\% sparse (Appendix \ref{app:datasparsity}). This is a worryingly sparse dataset for collaborative filtering. Su (2006 \cite{Su06}) reports a ``fast degradation of performance'' for the collaborative filtering algorithms they tested when the rate of sparsity exceeded 90\%. In addition there is the problem that ratings are not evenly distributed among authors, with a very small proportion of the authors accounting for the majority of ratings.
 
-Having analysed the dataset and conceived an ideal schema, I needed to decide what the criteria to apply when extracting my new dataset from the source data.
-
-Given that the purpose of the dataset is social recommendations, the first decision I made was to discard any wines without both tasting notes and a rating, whether.
-
-\subsection{Making Recommendations}
-
-Wine attributes, vintage, grape variety, region etc., are of limited use for making recommendations. Take a user who has rated a red Bordeaux wine highly. It is not interesting to that user for a system to simply recommend them other highly-rated red Bordeaux wines, which is what a system will do if it looks for items with similar attributes. It is likely that any drinker who enjoys Bordeaux wines will recognise that such wines are of a type, with geography, grape varieties and production processes in common. Thus the user will be capable of ``recommending'' Bordeaux wines to themselves, and will not have very much difficulty sourcing ones which are highly rated. They do not need a recommender system for that.
-
-It is recommendations in spite of the attributes of the subject item that are of real interest. Recommending a Syrah from Chile's Colchagua Valley to someone who rated a red Bordeaux wine highly might be of more interest. It is relatively more likely that a user is unaware of the fine Syrah wines from that region, and that makes it a much more interesting recommendation; potentially a good one.
-
-Similarly a recommendation of another Bordeaux red wine might be good, as long as it were possible to establish a commonality of appeal for that particular drinker other than that the wine is similar in attributes. For example there are many delicious Pauillacs from 2005, made of the same grape varieties in the same manner; finding the one which is most interesting to a given user is not aided by looking at its grape variety or appellation as they are identical. The appeal and interest of a wine recommendation lies in qualities beyond the item's attribute profile.
-
-So, by disregarding the attributes of the wines it may be possible to make more interesting recommendations.
-
-A corrollary benefit of this disregard for wine attributes is that I am able to make use of far more of the Decanter.com data, many of the wines within which have incomplete attributes.
-
-TODO appendix of data
-
-
-1. select a.name, count( t.id ) from author a join tasting t on a.id = t.author\_id where 0 < ( select count(*) from tasting t2 where t2.winei\_id = t
-.wine\_id and t2.author\_id <> 0 and t2.author\_id <> t.author\_id)  group by a.id;                                                                        
-+--------------------+---------------+
-| name               | count( t.id ) |
-+--------------------+---------------+
-| Steven Spurrier    |            53 |
-| James Lawther MW   |            21 |
-| Josephine Butchart |             1 |
-| Stephen Brook      |             3 |
-| Christelle Guibert |             9 |
-| Serena Sutcliffe   |            15 |
-| Harriet Waugh      |            23 |
-| Andrew Jefford     |            38 |
-+--------------------+---------------+
-
-2. select a.name, count( t.id ) from author a join tasting t on a.id = t.author\_id where 0 < ( select count(*) from tasting t2 where t2.wine\_id = t.wine\_id and t2.author\_id = {N} ) group by a.id; 
+In a few cases there are tastings with no author associated where an author's initials or full name are recorded within the text of a tasting note, but unfortunately extracting and making use of these initials has been impractical given the time constraints of this project.
 
 \subsection{Experimentation}
 
-In Chapter 2 of Collective Intelligence\cite{Segaran02}, Segaran details basic methods for user- and item-based collaborative filtering. Following the guidelines from this chapter I recreated Segaran's recommendation methods and applied them to my dataset.
+\subsubsection{Recommending Wines With Python}
 
 \begin{table}[ht]
-    \caption{Pearson Similarity of Authors}
+    \caption{Pearson Similarity of Authors (Appendix \ref{app:authorsim})}
     \centering
     \begin{tabular}{c c c c c c c c c c}
         \\\hline\hline
@@ -161,15 +143,62 @@ In Chapter 2 of Collective Intelligence\cite{Segaran02}, Segaran details basic m
     \label{table:authormatrix}
 \end{table}
 
-N.B.
+In Chapter 2 of Collective Intelligence (Segaran, 2007 \cite{Segaran07}), Segaran details basic methods for user- and item-based collaborative filtering. Following the guidelines from this chapter I recreated Segaran's recommendation methods and applied them to my dataset, utilizing the Python command line interpreter (See code in Appendix \ref{app:recommendations}). 
 
-Table data obtained by:
+Table \ref{table:authormatrix} shows the Pearson correlation between the authors. In cases where there are fewer than 3 items rated in common it is not possible for Pearson correlation to produce a useful result, and for such relationships my code returns a value of 0.0. Table \ref{table:authormatrix} shows that Pearson correlation was only able to produce similarity scores among five of the authors. For 18 authors in the system, recommendations could not be made at all for 13. This performance was consistent with my expectations given the sparseness of the data.
 
-from lib import recommendations
-authorsims = recommendations.getAuthorSimilarities()
+\subsection{API Interface}
 
+\subsubsection{Interchange Format}
 
-\subsection{Implementation}
+I chose to use JSON (JavaScript Object Notation) as my response format, which is a commonly used by RESTful APIs. It is designed to be natively handled by Javascript, but also has a sophisticated level of support in Python and other languages. 
+
+\subsubsection{Routes}
+
+For the API I conceived a very simple set of routes, based on providing accesss to two the different object types, authors and wines. with an additional index route at the root to aid discoverability. Figure \ref{api:routes} shows the routing structure for the API.
+
+Each route has a very simple url structure, with the plural item type and page number accessing a paged list of items, and the item type and id accessing any individual item.
+
+\begin{figure}
+\footnotesize
+\caption{API Routes. See code in Appendix \ref{app:flaskapp}}\label{api:routes}
+\begin{verbatim}
+/
+/author/<id>
+/authors/<page number>
+/wine/<id>
+/wine/<page number>
+\end{verbatim}
+\end{figure}
+\normalsize
+
+\subsubsection{Response Specification}
+
+In principle RESTful services should favour discoverability, so as such the reponses contain links to other documents available on the API which are relevant to them. The objects are also designed to be consistent with each other as far as possible, using the same attribute for comparable properties wherever possible. 
+
+Every response is an object with the attributes ``type'' and ``self''. The ``type'' attribute is to aid the client in interpreting the object and for this API can take the values ``author'', ``wine'', or ``list''. ``self'' is a sub-object containing at least the fields ``title'' and ``link'', with additional fields depending on the type of the object.
+
+``wine''- and ``author''-type objects have the attribute ``related\_content'', which is where different kinds of recommended content will be inserted by the API. The ``list''-type objects have the attribute ``list'', which is a list of items with ``title'' and ``link'' attributes.
+
+By structuring the responses this way I hope to make it as simple as possible for any client of the system to handle the different routes and navigate the API, as they should be able to ascertain the expected format of any object very quickly. 
+
+This example represents the template of an object with the minimum required fields, where \%s represents a placeholder for a string value:
+
+\footnotesize\begin{verbatim}
+{
+    ``type'': %s
+    ``self'': {
+        ``title'': %s
+        ``link'': %s
+    }
+}
+\end{verbatim}\normalsize
+
+Full example responses for each content type are shown in Appendices \ref{app:apiindex}, \ref{app:apiauthors}, \ref{app:apiauthor}, \ref{app:apiwines}, and \ref{app:apiwine}. Responses are in the JSON format as specified by JSON.org (2013 \cite{JsonOrg}). 
+
+\subsection{System Implementation}
+
+Figure \ref{fig:sommelierclasses} is a UML class diagram representing the complete Sommelier system.
 
 \begin{figure}[h!]
     \caption{Sommelier Class Diagram}
@@ -178,14 +207,46 @@ authorsims = recommendations.getAuthorSimilarities()
     \label{fig:sommelierclasses}
 \end{figure}
 
-Having so few wines tasted by more than one author in the dataset, and even fewer tasted by more than two, it was clear that my system needed to cope extremely well with sparsity. Su et al. \cite{SuImputed} show their \ldots
+The system is comprised of five main classes: Sommelier, SommelierBroker, SommelierDbConnector, SommelierRecommender, and SommelierRecommenderInterface. Additionally there are classes for different recommender implementations, and interactions with the files app.py and the sommelier\_precompute.py are indicated.
 
-!!! Would have been quixotic to attempt a complex approach involving text mining of tasting notes without first attempting to approximate the state of the art in imputation of preferences using matrix factorization, or a Bayesian approach\ldots
+\subsubsection{Flask}
 
-!!! I decided firstly to imitate Su et al.'s \cite{SuImputed} IDN-CF (eBMI) method (imputed densest neighbours collaborative filtering using extended Bayesian multiple imputation). This approach has been shown to mitigate the problem of sparsity, requiring very few neighbours to obtain its best recommendations compared to other methods. 
+The Flask framework is initialized by the file app.py, and this file is where all HTTP requests to the API are handled. For each route there is configuration in this file that calls the corresponding method on Sommelier. In this way the workings of the Sommelier application are completely unknown to Flask, and similarly Sommelier does not need to manage requests or routing in any way. Flask simply receives a request and routes it appropriately, passing Sommelier's return values to its Response class, which formats the HTTP response in a standard manner.
 
-!!! The IDN-CF (eBMI) implementation only utilizes the rating component of a tasting note, whereas I had set myself the objective of finding a use for the tasting note itself. Initially it occurred to me that I could build a Bayesian classifier, or similar, to identify \ldots Hu and Zhou (2008) etc.
+The following example is the routing in app.py for the route /authors, and shows how the only coupling between the Flask and Sommelier systems is the one-to-one relationship of Flask routes to methods on Sommelier (line 6):
 
+\footnotesize
+\begin{verbatim}
+@app.route('/authors', defaults = {'page_num': 1}, methods = ['GET'])
+@app.route('/authors/<int:page_num>', methods = ['GET'])
+def sommelier_authors(page_num):
+    response_body, keyed_args_dict = sommelier.author_page(page_num)
+    return Response(response_body, **keyed_args_dict)
+\end{verbatim}
+\normalsize
 
+Flask has a built-in development server, which can be launched from app.py by calling app.run(). I do so in the main method, enabling debugging mode as a keyed argument:
 
+\begin{verbatim}
+if _name_ ==  '_main_':
+    app.run(debug=True)
+\end{verbatim}
+
+By default this launches the server on port 5000 of localhost. Neither debug mode, not the development server are suitable for production environments, for which there are a number of other more robust options (Flask Deployment Options, 2013 \cite{FlaskDeployment}).
+
+\subsubsection{Database Access}
+
+Maintaining a connection to MySQL-python comes with the attendant complexity of managing of the lifecycle of a database connection object and cursor. To avoid having to recreate these objects many times in the code I wrote the wrapper SommelierDbConnector (see Figure \ref{fig:sommelierclasses}), which manages the connection and cursor in the minimum fashion, while exposing the minimum functionality to the application for executing on and fetching from the database. The full code is in Appendix \ref{app:sommelierdbconnector}.
+
+To further abstract the database from the application logic of the system I created a broker class, SommelierBroker, which holds a hard coded set of queries that are performed on the database. I a new query is to be made on the system it is to be written into the broker. This approach has serious drawbacks, such as that it would be potentially unwieldy to scale. However, as I developed the system I found that there was only a very small set of queries that I was using, and decided that it was easier in the short term for one broker to own all of them.
+
+\subsubsection{Recommenders}
+
+The system gets recommendations via the facade class SommelierRecommender (see Figure \ref{fig:sommelierclasses}. This pattern abstracts away the complexity of making recommendations from the rest of the system, offering a simple interface with which to query whichever of the recommenders is instantiated. 
+
+This pattern was very helpful when it came to developing the recommenders, as it makes it trivial to swap one out for another in the system.
+
+\subsubsection{Precomputation}
+
+For various recommendation approaches it is necessary to precompute data. I have not modelled this behaviour in Figure \ref{fig:sommelierclass} as there are many potential ways of doing so. I have assumed that arbitrary scripts would be created and run on a scheduled basis to carry out precomputation for methods such as matrix factorization or SVD, where imputing matrices cannot practically be done at runtime.
 

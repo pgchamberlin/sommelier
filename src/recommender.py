@@ -31,24 +31,8 @@ from recsys.evaluation.prediction import MAE, RMSE
 # Sommelier libs
 from broker import SommelierBroker
 
-# Abstract / interface class to define methods
-# for recommendation provider classes
-class SommelierRecommender:
-
-    def __init__(self, b=SommelierBroker()):
-        self.broker = b
-
-    def wines_for_author(self, author_id):
-        return []
-
-    def authors_for_author(self, author_id):
-        return []
-
-    def wines_for_wine(self, item_id):
-        return []
-
-    def impute_to_file(self, tastings):
-        return []
+# Abstract / base class to hold methods shared between all recommenders
+class SommelierRecommenderBase:
 
     def data_file_directory(self):
         return "".join([os.getcwd(), '/data/'])
@@ -113,7 +97,14 @@ class SommelierRecommender:
     # test the system. Movielens file format:
     # UserId::ItemId::Rating::Timestamp
     def movielens_line_to_tasting(self, line):
-        user_id, item_id, rating, timestamp = line.split('\t')
+        if line.find("::") != -1:
+            # this is double-colon separated
+            user_id, item_id, rating, timestamp = line.split("::")
+        elif line.find("\t") != -1:
+            # presumably this is tab-separated
+            user_id, item_id, rating, timestamp = line.split('\t')
+        else:
+            raise Exception("Cannot decode input string: {}".format(line))
         tasting = {
             'author_id': int(user_id),
             'wine_id': int(item_id),
@@ -122,7 +113,7 @@ class SommelierRecommender:
         }
         return tasting   
 
-    def tastings_to_movielens_format(self, tastings):
+    def tastings_to_movielens_format(self, tastings, separator="::"):
         # make a list of strings which will be the lines in our 
         # Movielens format data file. The format is:
         # AuthorId::WineId::Rating::Timestamp
@@ -130,13 +121,13 @@ class SommelierRecommender:
         for tasting in tastings:
             # if the date is not valid set to 0, otherwise convert to Unix epoch
             date = '0'
-            if tasting['tasting_date'] != '0000-00-00 00:00:00':
+            if 'tasting_date' in tasting and tasting['tasting_date'] != '0000-00-00 00:00:00':
                 date = str(time.mktime(time.strptime(tasting['tasting_date'], "%Y-%m-%d %H:%M:%S"))).encode('utf-8')
             lines.append("".join([
-                str(tasting['author_id']).encode('utf-8'), '::', 
-                str(tasting['wine_id']).encode('utf-8'), '::', 
-                str(float(tasting['rating'])).encode('utf-8'), '::', 
-                date, '\n']))
+                str(tasting['author_id']).encode('utf-8'), separator, 
+                str(tasting['wine_id']).encode('utf-8'), separator, 
+                str(tasting['rating']).encode('utf-8'), separator, 
+                date, '']))
         return lines
 
     def pearson_r(self, preferences, key_a, key_b):
@@ -202,27 +193,37 @@ class SommelierRecommender:
 # This class implements recommendations largely based on the 
 # basic user-user, user-item and item-item methods
 # detailed by Segaran (2007, Ch.2)
-class SommelierPearsonCFRecommender(SommelierRecommender):
+class SommelierPearsonCFRecommender(SommelierRecommenderBase):
 
     def __init__(self, b=SommelierBroker()):
         self.broker = b
 
     # using a weighted average
     def wines_for_author(self, author_id, max_items=5):
+        author_id = int(author_id)
         preferences, wine_ids = self.author_preferences(author_id)
         rankings = self.sorted_rankings(author_id, preferences, max_items)
         recommended_wine_ids = [ wine_ids[i] for r, i in rankings ]
-        return self.broker.get_wines_by_id(recommended_wine_ids)
+        if len(recommended_wine_ids) > 0:
+            return self.broker.get_wines_by_id(recommended_wine_ids)
+        # if we couldn't find any wines to recommend, return empty
+        return []
+        
 
     def authors_for_author(self, author_id, max_items=5):
+        author_id = int(author_id)
         preferences, wine_ids = self.author_preferences(author_id)
         return self.sorted_similarities(author_id, preferences)
 
     def wines_for_wine(self, wine_id, max_items=5):
+        wine_id = int(wine_id)
         preferences, wine_ids = self.wine_preferences(wine_id)
         rankings = self.sorted_rankings(wine_id, preferences, max_items=5)
         recommended_wine_ids = [ wine_ids[i] for r, i in rankings ]
-        return self.broker.get_wines_by_id(recommended_wine_ids)
+        if len(recommended_wine_ids) > 0:
+            return self.broker.get_wines_by_id(recommended_wine_ids)
+        # if we couldn't find any wines to recommend, return empty
+        return []
 
     def author_preferences(self, author_id):
         tastings = self.broker.get_comparable_author_tastings(author_id)
@@ -248,6 +249,9 @@ class SommelierPearsonCFRecommender(SommelierRecommender):
     def sorted_rankings(self, subject_id, preferences, max_items=5):
         totals = {}
         similarity_sums = {}
+        if subject_id not in preferences:
+            # we can't recommend for this subject
+            return []
         subject_preferences = preferences[subject_id]
         for other in preferences.keys():
             if other == subject_id:
@@ -271,7 +275,7 @@ class SommelierPearsonCFRecommender(SommelierRecommender):
 
 # Implements SommelierRecommender using 
 # python-recsys SVD library to make recommendations
-class SommelierRecsysSVDRecommender(SommelierRecommender):
+class SommelierRecsysSVDRecommender(SommelierRecommenderBase):
 
     # filename for raw tasting data in format used by MovieLens
     # format (rows): UserId::ItemId::Rating::UnixTime
@@ -284,7 +288,7 @@ class SommelierRecsysSVDRecommender(SommelierRecommender):
         self.broker = b
 
     def wines_for_author(self, author_id):
-        svd = self.load_recsys_svd(k=100, min_values=3, verbose=False)
+        svd = self.load_recsys_svd()
         # there may not be recommendations for this author, which would
         # raise a KeyError. We don't want a KeyError, an empty list is fine!
         try:
@@ -362,7 +366,7 @@ class SommelierRecsysSVDRecommender(SommelierRecommender):
         # if there's an svd file, load it - otherwise we're out of luck as
         # we don't want to build these matrices at runtime!
         tastings_svd_file = self.file_location(self.tastings_recsys_svd)
-        if recreate == False and os.path.isfile(tastings_svd_file):
+        if os.path.isfile(tastings_svd_file):
             svd = SVD(tastings_svd_file)
         # return the recsys SVD object, ready to make some recommendations...
         return svd
@@ -371,7 +375,7 @@ class SommelierRecsysSVDRecommender(SommelierRecommender):
 # Albert Yeung's example Matrix Factorization code
 # combined with basic CF techniques outlined in
 # Segaran's "Collective Intelligence" (2007, Ch. 2)
-class SommelierYeungMFRecommender(SommelierRecommender):
+class SommelierYeungMFRecommender(SommelierRecommenderBase):
 
     # filename for user/item matrix in lists format
     # format: [[1,2,3][4,5,6]..]
@@ -520,7 +524,7 @@ class SommelierYeungMFRecommender(SommelierRecommender):
             self.save_json_file(self.multiple_factorization_metas.format(args["factors"], args["steps"]), metas)
         return metas
 
-    def predict(self, imputed_matrix, authors, wines, author_id, wine_id):
+    def predict_rating(self, imputed_matrix, authors, wines, author_id, wine_id):
         if author_id in authors:
             author_idx = authors.index(author_id)
             if wine_id in wines:
@@ -528,13 +532,10 @@ class SommelierYeungMFRecommender(SommelierRecommender):
                 if author_idx < len(imputed_matrix):
                     if wine_idx < len(imputed_matrix[author_idx]):
                         return imputed_matrix[author_idx][wine_idx]
-        print author_id
-        print wine_id
-        print authors.index(author_id)
-        print wines.index(wine_id)
-        print len(imputed_matrix)
-        print len(imputed_matrix[author_idx])
-        print imputed_matrix[author_idx][wine_idx]
+                    raise Exception("Wine index out of bounds for matrix")
+                raise Exception("Author index out of bounds for matrix")
+            raise Exception("Wine index not found for imputed matrix")
+        raise Exception("Author index not found for imputed matrix")
 
     # Get all tastings, randomly split into train and test portions
     # Generate a matrix for the test portion of the data
@@ -570,7 +571,7 @@ class SommelierYeungMFRecommender(SommelierRecommender):
                     # there were no items for this wine in the test data
                     missing_wines += 1
                     continue
-                prediction = self.predict(imputed_matrix, author_ids, wine_ids, tasting["author_id"], tasting["wine_id"])
+                prediction = self.predict_rating(imputed_matrix, author_ids, wine_ids, tasting["author_id"], tasting["wine_id"])
                 rating = float(tasting['rating'])
                 error = abs(rating - prediction)
                 author_errors.setdefault(tasting['author_id'], [])
@@ -630,7 +631,6 @@ class SommelierYeungMFRecommender(SommelierRecommender):
                     zero_count += 1.0
         return ( zero_count / total_count ) * 100.0
 
-## UNIMPLEMENTED
 
 # Implements SommelierRecommender performing
 # matrix decomposition based around word frequency to
@@ -640,6 +640,8 @@ class SommelierYeungMFRecommender(SommelierRecommender):
 # the techniques outlined by Segaran in "Collective 
 # Intelligence" (2007, Ch. 10), but applied in a different
 # context.
+#
+## UNIMPLEMENTED: THIS CLASS DOES NOT WORK ... YET
 class SommelierTextMFRecommender(SommelierYeungMFRecommender):
 
     # filename for user/item matrix in lists format
@@ -704,4 +706,21 @@ class SommelierTextMFRecommender(SommelierYeungMFRecommender):
             if dist[w] < min_values:
                 dist.pop(w)
         return dist
+
+# Facade class for recommenders. May have specific recommender implementation
+# injected into it or depend on default defined in its signature.
+class SommelierRecommender:
+
+    def __init__(self, b=SommelierBroker(), r=SommelierPearsonCFRecommender()):
+        self.broker = b
+        self.recommender = r
+
+    def wines_for_author(self, author_id):
+        return self.recommender.wines_for_author(author_id)
+
+    def authors_for_author(self, author_id):
+        return self.recommender.authors_for_author(author_id)
+
+    def wines_for_wine(self, wine_id):
+        return self.recommender.wines_for_wine(wine_id)
 

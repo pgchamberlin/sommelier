@@ -3,13 +3,11 @@ import unittest
 from mock import Mock, MagicMock
 
 # import all our recommenders...
-from recommender import SommelierRecommender, SommelierPearsonCFRecommender, SommelierYeungMFRecommender, SommelierTextMFRecommender, SommelierRecsysSVDRecommender
+from recommender import SommelierRecommender, SommelierPearsonCFRecommender, SommelierYeungMFRecommender, SommelierRecsysSVDRecommender
 
-#
 # Tests for the sommelier recommender class
 # This does not test some very small methods, such as
 # those for saving and retrieving JSON files
-#
 class RecommenderTest(unittest.TestCase):
 
     dummy_tastings = [
@@ -40,6 +38,30 @@ class RecommenderTest(unittest.TestCase):
         "row_5": [ 1, 2 ],
         "row_6": [ 3, 1 ]}
 
+    dummy_line_tab_separated = "1\t2\t3\t4"
+    
+    dummy_line_colon_separated = "1::2::3::4"
+
+    dummy_line_invalid_separator = "1BAZ2BAZ3BAZ4"
+
+    dummy_line_invalid_values = "Should::NOT::be:Strings"
+
+    expected_tasting = {'author_id': 1, 'rating': 3, 'tasting_date': '1970-01-01 01:00:04', 'wine_id': 2}
+
+    expected_movielens_lines_colon = [ "1::5::9::0", "2::6::10::0", "3::7::11::0", "4::8::12::0" ]
+
+    expected_movielens_lines_tab = [ "1\t5\t9\t0", "2\t6\t10\t0", "3\t7\t11\t0", "4\t8\t12\t0" ]
+
+    dummy_matrix_a = [[1,1,1,1],[2,2,2,2],[3,3,3,3]]
+
+    dummy_matrix_b = [[1,1,1,1],[2,4,4,2],[3,3,3,1]]
+
+    dummy_matrix_c = [[0,2,0,2],[0,2,0,2],[2,2,2,2]]
+
+    expected_mae_a_b = ((0.0,1.0,0.5),0.5)
+
+    expected_mae_a_c = ((1.0,1.0,1.0),1.0)
+
     def setUp(self):
         mock_broker = MagicMock()
         self.recommender = SommelierRecommender(b=mock_broker)
@@ -68,9 +90,24 @@ class RecommenderTest(unittest.TestCase):
 
         # preferences formatting for wine rows / author columns
         self.assertEqual(self.expected_preferences_2, self.recommender.preferences(self.dummy_tastings, 'wine_id', 'author_id')) 
+    
+    # Movielens data can be encoded with either tabs or double colons (::), so test for both and neither...
+    def test_movielens_line_to_tasting(self):
+        self.assertEqual(self.expected_tasting, self.recommender.movielens_line_to_tasting(self.dummy_line_tab_separated))
+        self.assertEqual(self.expected_tasting, self.recommender.movielens_line_to_tasting(self.dummy_line_colon_separated))
+        self.assertRaises(Exception, lambda _: self.recommender.movielens_line_to_tasting(self.dummy_line_invalid_separator))
+        self.assertRaises(Exception, lambda _: self.recommender.movielens_line_to_tasting(self.dummy_line_invalid_values))
 
-#
-#
+    # tastings_to_movielens_format() should use double colon (::) separator by default
+    def test_tastings_to_movielens_format(self):
+        self.assertEqual(self.expected_movielens_lines_colon, self.recommender.tastings_to_movielens_format(self.dummy_tastings))
+        self.assertEqual(self.expected_movielens_lines_colon, self.recommender.tastings_to_movielens_format(self.dummy_tastings, separator="::"))
+        self.assertEqual(self.expected_movielens_lines_tab, self.recommender.tastings_to_movielens_format(self.dummy_tastings, separator="\t"))
+
+    def test_evaluate_matrices(self):
+        self.assertEquals(self.expected_mae_a_b, self.recommender.recsys_evaluate_matrices(self.dummy_matrix_a, self.dummy_matrix_b))
+        self.assertEquals(self.expected_mae_a_c, self.recommender.recsys_evaluate_matrices(self.dummy_matrix_a, self.dummy_matrix_c))
+
 #
 class PearsonCFRecommenderTest(unittest.TestCase):
 
@@ -131,6 +168,8 @@ class YeungMFRecommenderTest(unittest.TestCase):
         self.recommender = SommelierYeungMFRecommender(b=mock_broker)
  
     def test_generate_lists_ui_matrix(self):
-        generated_matrix = self.recommender.generate_lists_ui_matrix()
+        generated_matrix, foo, bar = self.recommender.generate_lists_ui_matrix()
         self.assertEqual(self.expected_lists_matrix, generated_matrix)
+
+# class RecsysSVDRecommenderTest(unittest.TestCase):
 

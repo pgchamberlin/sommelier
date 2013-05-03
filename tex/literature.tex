@@ -2,15 +2,15 @@
 Chapter 2: Literature Review and Context - the setting of the project in the context of other relevant work or theories or results. How this setting influenced the project.
 \fi
 
-\section{Literature Review}\label{literature review}
+\section{Literature Review and Context}\label{literature review}
 
 \subsection{Recommender Systems}
 
-Although the term \textit{recommender system} was not coined until 1997 by Resnick and Varian \cite{Resnick97}, the Tapestry system of 1992 \cite{Goldberg92} is widely recognised as the first of the kind \cite{Su09}. The creators of Tapestry coined the term \textit{collaborative filtering} to describe their method of recommendation, which is based on the principle that if two users rate a number of the same items in a similar manner, then it can be assumed that they will rate other new items similarly \cite{Su09}.
+Although the term \textit{recommender system} was not coined until 1997 by Resnick and Varian (Resnick and Varian, 1997 \cite{Resnick97}), the Tapestry system of 1992 (Goldberg et al., 1992 \cite{Goldberg92}) is widely recognised as the first of the kind (Su and Khoshoftaar, 2009 \cite{Su09}). The creators of Tapestry coined the term \textit{collaborative filtering} to describe their method of recommendation, which is based on the principle that if two users rate a number of the same items in a similar manner, then it can be assumed that they will rate other new items similarly (Su and Koshgoftaar, 2009\cite{Su09}).
 
-Su and Khoshgoftaar point out that although collaborative filtering has been widely adopted as a general term to describe systems making recommendations, many such systems do not explicitly collaborate with users or exclusively filter items for recommendation \cite{Su09}. In fact the term recommender system itself was coined by Resnick and Varian in response to the inadequacy of collaborative filtering for describing the plurality of techniques that were beginning to become associated with it. Recommender system is intentionally a broader term, describing any system that ``assists and augments [the] natural social process'' of recommendation \cite{Resnick97}.
+Su and Khoshgoftaar (2009 \cite{Su09}) point out that although collaborative filtering has been widely adopted as a general term to describe systems making recommendations, many such systems do not explicitly collaborate with users or exclusively filter items for recommendation. In fact the term recommender system itself was coined by Resnick and Varian in response to the inadequacy of collaborative filtering for describing the plurality of techniques that were beginning to become associated with it. Recommender system is intentionally a broader term, describing any system that ``assists and augments [the] natural social process'' of recommendation (Resnick and Varian, 1997 \cite{Resnick97}).
 
-In his 2002 survey of the state of the art in recommender systems, Robin Burke presents five categories of recommender, including collaborative filtering as one \cite{Burke02}. I have reproduced his table of recommendation techniques in Table \ref{table:burke02}. Burke presents five main categories of filtering technique: collaborative, \textit{content-based}, \textit{demographic}, \textit{utility-based} and \textit{knowledge-based} \cite{Burke02}.
+In his 2002 survey of the state of the art in recommender systems, Robin Burke presents five categories of recommender (Burke, 2002 \cite{Burke02}). I have reproduced his table of recommendation techniques in Table \ref{table:burke02}. Burke presents five main categories of filtering technique: collaborative, \textit{content-based}, \textit{demographic}, \textit{utility-based} and \textit{knowledge-based} (Burke, 2002 \cite{Burke02}).
 
 \begin{table}[ht]
     \caption{Recommendation Techniques, reproduced from Burke, 2002 \cite{Burke02}}
@@ -28,80 +28,73 @@ In his 2002 survey of the state of the art in recommender systems, Robin Burke p
     \label{table:burke02}
 \end{table}
 
-These five kinds of system are classified using three properties: \textit{background data}, \textit{input data} and \textit{process} \cite{Burke02}. Background data is that which exists before and independant of the recommendation, such as previous stated preferences of a group of users \textit{U} for a set of items \textit{I}. Input data is that which is considered by the system when making recommendations, such as the ratings of an individual \textit{u} of items in \textit{I}. Process is the method by which recommendations are arrived at by application of the input data and the background data \cite{Burke02}. These three aspects provide a good lens through which to compare the different approaches.
+These five kinds of system are classified using three properties: \textit{background data}, \textit{input data} and \textit{process} (Burke, 2002 \cite{Burke02}). Background data is that which exists before and independant of the recommendation, such as previous stated preferences of a group of users \textit{U} for a set of items \textit{I}. Input data is that which is considered by the system when making recommendations, such as the ratings of an individual \textit{u} of items in \textit{I}. Process is the method by which recommendations are arrived at by application of the input data and the background data (Burke, 2002 \cite{Burke02}). These three aspects provide a good lens through which to compare the different approaches.
 
 \subsubsection{Collaborative Filtering}
 
-Collaborative filtering is "the technique of using peer opinions to predict the interest of others" \cite{Claypool99}, and uses the ratings of a set of users \textit{U} over a set of items \textit{I} as background data, and the ratings of each individual user \textit{u} of items in \textit{I} as input data. The process of recommendation is to identify similar users to \textit{u} in \textit{U}, and then to infer their preferences for items in \textit{I} based on the preferences of those similar users \cite{Burke02}.
+Collaborative filtering is ``the technique of using peer opinions to predict the interest of others'' (Claypool et al., 1999 \cite{Claypool99}), and uses the ratings of a set of users \textit{U} over a set of items \textit{I} as background data, and the ratings of each individual user \textit{u} of items in \textit{I} as input data. The process of recommendation is to identify similar users to \textit{u} in \textit{U}, and then to infer their preferences for items in \textit{I} based on the preferences of those similar users (Burke, 2002 \cite{Burke02}).
 
-In 2002 Burke described collaborative filtering as the most widely used and mature of these types \cite{Burke02}, citing GroupLens \cite{Resnick94} and Tapestry \cite{Goldberg92} as important examples of such systems, and from my observations of more recent literature that remains the case. Collaborative filtering is still certainly among the most widely used of these techniques, with Su and Khoshgoftaar describing a vast array of cutting-edge collaborative filtering-based systems in their 2009 survey \cite{Su09}.
+In 2002 Burke described collaborative filtering as the most widely used and mature of these types (Burke, 2002 \cite{Burke02}), citing GroupLens (Resnick, 1994 \cite{Resnick94}) and Tapestry (Goldberg, 1992 \cite{Goldberg92}) as important examples of such systems. From my observations of more recent literature that remains the case. Collaborative filtering is still certainly among the most widely used of these techniques, with Su and Khoshgoftaar describing a large number of collaborative filtering-based systems in their 2009 survey (Su and Koshgoftaar, 2009 \cite{Su09}).
 
-Even in its most basic form there are many potential methods for measuring similarity between users in a collaborative filtering system. The most simple are such distance metrics such as Manhattan distance or Euclidean distance \cite{Segaran07}. One of the most commonly used, even in very advanced systems, is Pearson correlation coefficient \cite{Segaran07}.
+Even in its most basic form there are many potential methods for measuring similarity between users in a collaborative filtering system. The most simple are such distance metrics such as Manhattan distance or Euclidean distance (Segaran, 2007 Ch.2 \cite{Segaran07}). One of the most commonly used and relatively simple measures of similarity is the Pearson correlation coefficient, which is even used in quite advanced systems (Segaran, 2007 Ch.2 \cite{Segaran07}).
 
-Collaborative filtering is versatile, and from the same background and input data can produce user-item, user-user and item-item recommendations.
-
-There are a number of significant issues associated with the application of pure collaborative filtering, however, which can hamper its successful application:
+There are a number of issues associated with the application of pure collaborative filtering, however, which hamper its application in many instances:
 
 \begin{itemize}
-    \item Early rater problem, whereby an item entering the system with no ratings has no chance of being recommended \cite{Claypool99}.
-    \item Sparsity problem. Where there is a high ratio of items to ratings it may be difficult to find items which have been rated by enough users to use as the basis for recommendation \cite{Claypool99} \cite{Su09}.
-    \item Grey sheep, which are users who neither conform nor disagree with any other group in a significant way, making it very difficult to recommend items for them \cite{Claypool99} \cite{Su09}.
-    \item Synonymy, whereby identical items have different names or entries. In this case the collaborative filtering systems are unable to detect that they are the same item \cite{Su09}.
-    \item Vulnerability to shilling, where a user or organisation might submit a very large number of ratings to manipulate the recommendability of items in their own interest \cite{Su09}.
+    \item Early rater problem, whereby an item entering the system with no ratings has no chance of being recommended (Claypool et al., 1999 \cite{Claypool99}).
+    \item Sparsity problem. Where there is a high ratio of items to ratings it may be difficult to find items which have been rated by enough users to use as the basis for recommendation (Claypool et al., 1999 \cite{Claypool99})(Su and Koshgoftaar, 2009 \cite{Su09}).
+    \item Grey sheep, which are users who neither conform nor disagree with any other group in a significant way, making it very difficult to recommend items for them (Claypool et al., 1999 \cite{Claypool99})(Su and Koshgoftaar, 2009 \cite{Su09}).
+    \item Synonymy, whereby identical items have different names or entries. In this case the collaborative filtering systems are unable to detect that they are the same item (Su and Koshgoftaar, 2009 \cite{Su09}).
+    \item Vulnerability to shilling, where a user may submit a very large number of ratings to manipulate the recommendation of items (Su and Koshgoftaar, 2009 \cite{Su09}).
 \end{itemize}
 
-Much of the variation between collaborative filtering techniques described by Su and Khoshgoftaar \cite{Su09} can be attributed to efforts by system developers to minimise the impact of one or more of these problems by introducing auxiliary methods, and it is testament to the power of collaborative filtering that these efforts are made.
+Much of the variation between collaborative filtering techniques described by Su and Khoshgoftaar (2009 \cite{Su09}) can be attributed to efforts by system developers to minimise the impact of one or more of these problems by introducing auxiliary methods.
 
 \subsubsection{Content-based}
 
-In content-based filtering systems the features of items in \textit{I} form the background data, and the user \textit{u}'s ratings serve as the input data. The process of recommendation depends on building a classifier that can predict \textit{u}'s rating behaviour in respect of an item \textit{i} based on \textit{u}'s previous ratings of items in \textit{I} \cite{Burke02}.
+In content-based filtering systems the features of items in \textit{I} form the background data, and the user \textit{u}'s ratings serve as the input data. The process of recommendation depends on building a classifier that can predict \textit{u}'s rating behaviour in respect of an item \textit{i} based on \textit{u}'s previous ratings of items in \textit{I} (Burke, 2002 \cite{Burke02}).
 
-Content-based, like collaborative filtering, builds up a long term profile of a user's interests and preferences \cite{Burke02}.
+Content-based, like collaborative filtering, builds up a long term profile of a user's interests and preferences (Burke, 2002 \cite{Burke02}). Researchers have developed systems which successfully combined content-based and collaborative filtering systems to produce better recommendations. Claypool et al. describe such a system which predicts ratings based on a weighted average of results from each system, with the weighting varying per user in order to achieve optimal results (Claypool et al., 1999 \cite{Claypool99}).
 
 \subsubsection{Demographic}
 
-Demographic recommender systems use demographic information about users \textit{U} and their ratings in \textit{I} as background data, with demographic information about \textit{u} as the input data. The recommendation process depends on matching \textit{u} with other demographically similar users in \textit{U} \cite{Burke02}.
+Demographic recommender systems use demographic information about users \textit{U} and their ratings in \textit{I} as background data, with demographic information about \textit{u} as the input data. The recommendation process depends on matching \textit{u} with other demographically similar users in \textit{U} (Burke, 2002 \cite{Burke02}).
 
 \subsubsection{Utility-based}
 
-Utility-based systems use features of items in \textit{I} as their background data, and depend on a utility function representing \textit{u}'s preferences in order to arrive at recommendations. The process is the application of the function for \textit{u} to the items \textit{I} \cite{Burke02}.
+Utility-based systems use features of items in \textit{I} as their background data, and depend on a utility function representing \textit{u}'s preferences in order to arrive at recommendations. The process is the application of the function for \textit{u} to the items \textit{I} (Burke, 2002 \cite{Burke02}).
 
 \subsubsection{Knowledge-based}
 
-Knowledge-based systems, like utility-based systems, draw on the features of items in \textit{I} as their background data. As input data they require information about \textit{u}'s needs. The process is to infer a need for one or more items in \textit{I} \cite{Burke02}.
+Knowledge-based systems, like utility-based systems, draw on the features of items in \textit{I} as their background data. As input data they require information about \textit{u}'s needs. The process is to infer a need for one or more items in \textit{I} (Burke, 2002 \cite{Burke02}).
 
+Knowledge-based systems can also benefit from being combined with collaborative filtering systems, in a way that may improve ann under-performing knowledge-based system, but without realising pure collaborative filtering's ability to identify niche groups (Burke, 1999 \cite{Burke99b}).
 
+\subsection{Recommending Wines.}
 
+Recommender systems for wines are not a new idea, being typical of the kind of item many systems are designed to recommend. Burke developed the VintageExchange FindMe recommender system in 1999 (Burke, 1999 \cite{Burke99}), and there is at least one patent pending with the WIPO for a wine recommender system as an aid to salespeople or waiting staff (Ward et al., 2012 \cite{WIPO12}).
 
+Burke's FindMe, a knowledge-based recommender system, ``required approximately one person-month of knowledge engineering effort'' (Burke, 1999b \cite{Burke99b}) in order to perform well. Such knowledge-based systems are required to recognise the importance of given product features, and so require a great deal of priming (Burke, 1999b \cite{Burke99b}).
 
-Developed around the same time as Tapestry, GroupLens \cite{Resnick94} was another influential early recommender system. The GroupLens' research lab, founded in 1992, is still active at the University of Minnesota, and continues to research the field of recommender systems \cite{GroupLensOrg}.
+Another wine recommender system is the Tetherless World Wine Agent (TWWA) (Patton, 2010 \cite{Patton10}). The TWWA project is primarily concerned with knowledge representaion and the Semantic Web, presenting a common and collaborative ontology for wine with which users can share wine recommendations across their social networks (TWWA, 2013 \cite{TWWAIndex}). The system does not automatically tailor recommendations to users, although this is stated as a target for future work (TWWA, 2013 \cite{TWWAIndex}).
 
+\subsection{Evaluating Recommender Systems}
 
-  - User-based filtering
-  - Item-based filtering
+Shani and Gunawardana (2011 \cite{Shani11}) describe several approaches to the evaluation of recommender systems, including different experimental settings and a number of different statistical methods. They highlight the different aspects of recommender systems that can be evaluated, including prediction accuracy; how accurately does the system predict ratings or preferences, item-space coverage; what proportion of the items in the system are recommendable, and user-space coverage; the proportion of users or interactions the system can provide recommendations for (Shani and Gunawardana, 2011 \cite{Shani11}).
 
--- Content-Based Filtering
-  - Variants
+In terms of prediction accuracy mean absolute error (MAE), and root mean squared error (RMSE) are the most popular measures of prediction accuracy (Shani and Gunawardana, 2011 \cite{Shani11}), which Su and Khoshgoftaar (2009 \cite{Su09}) call ``predictive accuracy metrics''. 
 
--- Characteristics of the domain
+There is some criticism of accuract metrics applied to recommender systems. McNee, Riedl and Konstan (2006 \cite{McNee06}) cite Amazon.com as a case in point, where on the page for a book by a given author you will find recommendations for other of the same author's books. They argue that this is not interesting for the user, and that there is a need for recommender systems developers to look beyond simply the ratability of systems, concluding, ``It is now time to also study recommenders from a user-centric perspective to make them not only accurate and helpful, but also a pleasure to use''.
 
---- Cold start problem
---- Sparsity problem
---- ... etc.
+\subsection{Web Services and Service Oriented Architecture}
 
-\myparagraph{Recommending Wines.}
+Service oriented architecture (SOA) is an increasingly widely used paradigm in enterprise applications, enabling such benefits as modularity, distribution and reuse of services (Sheikh et al., 2011 \cite{Sheikh11}). SOA systems are loosely coupled, and lend themselves to supporting heterogeneous applications (Benatallah and Nezhad, 2008 \cite{Benatallah08}), such as would be the case for a service providing data for a variety of websites or mobile applications. Web SOAs encompass traditional WS-* web services approaches, such as SOAP and XML, as well as the more recently emerging RESTful (REpresentational State Transfer) approach, which takes advantage of the existing communications protocol of HTTP, and associated protocols such as SSL (Benatallah and Nezhad, 2008 \cite{Benatallah08}). RESTful and WS-* have their benefits and weaknesses, and the choice of either would be dependant on the needs of any given service. 
 
-Recommender systems for wines are not a new idea, being typical of the kind of item many systems are designed to recommend. Burke developed the VintageExchange FindMe recommender system in 1999 \cite{Burke99}, and there is at least one patent pending with the WIPO for a wine recommender system, which appears to be conceived as a point of sale aid \cite{WIPO12}.
+Pautasso et al. (2008 \cite{Pautasso08}) critically compare WS-* and RESTful services, concluding that although REST is limited by the contraints of the HTTP protocol, its restrictive feature set is at the same time its strength, ``choosing REST removes the need for making a series of further architectural decisions related to the various layers of the WS-* stack and makes such complexity appear as superfluous'' (Pautasso et al., 2008 \cite{Pautasso08}).
 
-Burke's FindMe, a knowledge-based recommender system, ``required approximately one person-month of knowledge engineering effort''\cite{Burke99b} in order to perform well, as such systems are required to hold knowledge of the importance of given product features \cite{Burke99b}.
+\subsection{Implications}
 
-Another wine recommender system is the Tetherless World Wine Agent (TWWA) \cite{Patton10}. The TWWA project is primarily concerned with knowledge representaion and the Semantic Web, presenting a common and collaborative ontology for wine with which users can share wine recommendations across their social networks \cite{TWWAIndex}. The system does not automatically tailor recommendations to users, although this is stated as a target for future work \cite{TWWAIndex}.
+There is extensive literature on recommender systems, so much so that it is very difficult to assess the pros and cons of any given approach in respect of my project. One theme that is very strong in recommender systems is that of collaborative filtering, which is central to the majority of systems I have looked at. In many cases collaborative filtering is used in conjunction with other methods that boost or tune the results.
 
-\myparagraph{Evaluating Recommender Systems}
-
-!! MAE, NEtflix RMSE etc.
-
-!! Shani, Gurawander (M\$): evaluating recommender systems
-
-!! Also: McNee et al. ``How Accuracy Metrics Have Hurt Recommender Systems''
+With regard to the web application component of my system, it seems clear that a RESTful web service would be suitable. My system will have a small number of API endpoints, so I will be able to reap the benefits the simplicity of the RESTful web stack without suffering the difficulties associated with its limited customisability.
 
