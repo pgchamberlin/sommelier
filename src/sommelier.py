@@ -133,16 +133,17 @@ class Sommelier():
         if not record:
             return self.http_not_found_json()
         tastings_list = []
-        for tasting in record['tastings']:
-            tastings_list.append({
-                'rating': tasting['rating'],
-                'notes': tasting['notes'],
-                'tasting_date': tasting['tasting_date'],
-                'wine': {
-                    'title': '{} {}'.format(tasting['wine'], tasting['vintage']),
-                    'link': '/wine/{}'.format(tasting['wine_id'])
-                }
-            })
+        if 'tastings' in record:
+            for tasting in record['tastings']:
+                tastings_list.append({
+                    'rating': tasting['rating'],
+                    'notes': tasting['notes'],
+                    'tasting_date': tasting['tasting_date'],
+                    'wine': {
+                        'title': '{} {}'.format(tasting['wine'], tasting['vintage']),
+                        'link': '/wine/{}'.format(tasting['wine_id'])
+                    }
+                })
         wines = self.recommender.wines_for_author(author_id)
         wines_list = []
         for wine in wines:
