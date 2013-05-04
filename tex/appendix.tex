@@ -64,228 +64,35 @@ sudo apt-get install python-matplotlib
 
 \subsection{Migration} \label{app:datamigration}
 
-These commands recreate the migration of data from the original Decanter.com wines database to the Sommelier database.
+The notes in this section include the commands that recreate the migration of data from the original Decanter.com wines database to the Sommelier database.
 
-File./notes/queries.md. Modify the tasting notes database to remove nonsensical author names from the tasting table:
-
-\begin{verbatim}
-USE wines;
-UPDATE tasting SET author = 'Christelle Guibert' where author = 'C hristelle Guibert';
-UPDATE tasting SET author = '' WHERE author IN (
-    'Rising stars',
-    'New releases',
-    'Great wine buys',
-    'Panel Tasting',
-    'Hot tip',
-    'Wine of the month',
-    'Wine of the week',
-    'Connoisseur\'s choice',
-    'Decanter choice',
-    'Decanter Fine Wine Encounter 2002',
-    'In the Decanter tasting room',
-    'Christmas choice',
-    ''
-) OR author IS NULL;
-\end{verbatim}
-
-
+\subsubsection{Convert to UTF-8}
 
 \begin{verbatim}
-Select count of wines tasted by each taster in author column of \`tasting\`:
-
-    select t.author, count(*) 
-    from tasting as t 
-    where author is not NULL 
-      and author <> '' 
-      and author not in (
-        'Rising stars',
-        'New releases',
-        'Great wine buys',
-        'Panel Tasting',
-        'Hot tip',
-        'Wine of the month',
-        'Wine of the week',
-        'Connoisseur\'s choice',
-        'Decanter choice',
-        'Decanter Fine Wine Encounter 2002',
-        'In the Decanter tasting room',
-        'Christmas choice'
-      ) 
-      group by t.author;
-
-    +----------------------+----------+
-    | author               | count(*) |
-    +----------------------+----------+
-    | Alan Spencer         |       19 |
-    | Amy Wislocki         |       29 |
-    | Andrew Jefford       |      105 |
-    | Beverley Blanning MW |       13 |
-    | Carolyn Holmes       |        1 |
-    | Christelle Guibert   |      120 |
-    | Clive Coates MW      |        6 |
-    | David Peppercorn     |       45 |
-    | Gerald D Boyd        |        7 |
-    | Harriet Waugh        |      253 |
-    | James Lawther MW     |      238 |
-    | John Radford         |        2 |
-    | Josephine Butchart   |       24 |
-    | Norm Roby            |        4 |
-    | Richard Mayson       |       14 |
-    | Rosemary George MW   |        6 |
-    | Serena Sutcliffe     |       31 |
-    | Stephen Brook        |      491 |
-    | Steven Spurrier      |      510 |
-    +----------------------+----------+
-    19 rows in set (0.03 sec)
-
-Investigation of prices in tasting notes:
-
-    select price from tasting 
-    where price not like '£%' 
-      and price not like '$%' 
-      and price != '' 
-      and price is not null 
-      and price not like 'n/a%' 
-      and price not like 'POA' 
-      and price not like '%TBC%' 
-      and price not like 'na%' 
-      and price not like '%Nicholas%' 
-      and price not like '%old out%' 
-      and price not like 'n./a%' 
-      and price not like 'tcb%' 
-      and price not like 'n/ a%' 
-      and price not like '%request%' 
-      and price not like '%poa%' 
-      and price not like '%Howard Ripley%' 
-      and price not like '%N\'/A%' 
-      and price not like '%N/A%' 
-      and price not like '%ut of%' 
-      and price not like '%tba%' 
-      and price not like '%trade%' 
-      and price not like '%undefined%' 
-      and price not like '%unreleased%'
-      and price not like '%N/UK%'
-      and price not like '%not released%'
-      and price not like '%limited avail%'
-      and price not like '%on reques%'
-      and price not like '%not in st%'
-      and price not like '%ice on ap%'
-      and price not like '%JkN%'
-      and price not like '%autumn%'
-      and price not like '%#316'
-      and price not like '%not ye%'
-      and price not like '%Lib%';
-      \end{verbatim}
-
-How many wines are there which have been tasted by > 1 named author?
-
-\begin{verbatim}
-    mysql> select count(*) from wine w where 1 < ( select count(*) from tasting t2 where t2.author <> '' and t2.wine_id = w.id);
-    +----------+
-    | count(*) |
-    +----------+
-    |      104 |
-    +----------+
-    1 row in set (0.52 sec)
-
-How many wines have been tasted by > 1 author, named or ''?
-
-    mysql> select count(*) from wine w where 1 < ( select count(*) from tasting t2 where t2.wine_id = w.id);
-    +----------+
-    | count(*) |
-    +----------+
-    |     3225 |
-    +----------+
-    1 row in set (0.32 sec)
-
-
-How many wines in total?
-
-    mysql> select count(*) from wine;
-    +----------+
-    | count(*) |
-    +----------+
-    |    50539 |
-    +----------+
-    1 row in set (0.00 sec)
-
-Generally speaking:
-
-1918   Wines in denormalised_quick_search_data table associated with tastings with authors
-1411   ... as above with rating > 0 (i.e. a valid rating)
-31704  Wines in denormalised_quick_search_data with join to tasting
-29185  ... as above with rating > 0
-29732  ... as above with notes <> '' (i.e. written tasting note)
-27232  ... as above with intersection of rating > 0 and notes <> ''`
-Wine data completeness...
-
-    SELECT COUNT(*) FROM sommelier WHERE (grape_variety IS NULL OR appellation IS NULL OR sub_region IS NULL OR region IS NULL OR country IS NULL OR producer IS NULL OR type IS NULL OR style IS NULL OR colour IS NULL);
-    +----------+
-    | COUNT(*) |
-    +----------+
-    |    21516 |
-    +----------+
-    1 row in set (0.04 sec)
-
-
-    SELECT COUNT(*) FROM sommelier WHERE (grape_variety IS NULL OR appellation IS NULL OR sub_region IS NULL OR region IS NULL OR country IS NULL OR producer IS NULL);
-    +----------+
-    | COUNT(*) |
-    +----------+
-    |    14830 |
-    +----------+
-    1 row in set (0.00 sec)
-
-    SELECT COUNT(*) FROM sommelier WHERE (grape_variety IS NULL OR appellation IS NULL);
-    +----------+
-    | COUNT(*) |
-    +----------+
-    |    14222 |
-    +----------+
-    1 row in set (0.00 sec)
-
-    mysql> SELECT COUNT(*) FROM sommelier WHERE (grape_variety IS NULL);
-    +----------+
-    | COUNT(*) |
-    +----------+
-    |    13523 |
-    +----------+
-    1 row in set (0.00 sec)
-
-    mysql> SELECT COUNT(*) FROM sommelier WHERE (grape_variety IS NOT NULL AND appellation IS NOT NULL AND sub_region IS NOT NULL AND region IS NOT NULL AND country IS NOT NULL AND producer IS NOT NULL AND type IS NOT NULL AND style IS NOT NULL AND colour IS NOT NULL );
-    +----------+
-    | COUNT(*) |
-    +----------+
-    |    10169 |
-    +----------+
-    1 row in set (0.05 sec)
-
 ## Conversion from latin1 to utf8:
 
 Based on advice from: http://en.gentoo-wiki.com/wiki/Convert_latin1_to_UTF-8_in_MySQL
 
-    From the Bash shell:
-    $ mysqldump -uroot -p -hlocalhost --default-character-set=latin1 -c --insert-ignore --skip-set-charset -r wine_dump.sql wine
-    $ file wine_dump.sql
-    > wine_dump.sql: Non-ISO extended-ASCII English text, with very long lines
-    $ iconv -f ISO8859-1 -t UTF-8 wine_dump.sql > wine_dump_utf8.sql
-    $ sed -i 's/latin1/utf8/g' wine_dump_utf8.sql
+From the Bash shell:
+$ mysqldump -uroot -p -hlocalhost --default-character-set=latin1 -c --insert-ignore --skip-set-charset -r wine_dump.sql wine
+$ file wine_dump.sql
+> wine_dump.sql: Non-ISO extended-ASCII English text, with very long lines
+$ iconv -f ISO8859-1 -t UTF-8 wine_dump.sql > wine_dump_utf8.sql
+$ sed -i 's/latin1/utf8/g' wine_dump_utf8.sql
 
-    Now, from the MySQL command line:
-    mysql> CREATE DATABASE sommelier CHARACTER SET utf8 COLLATE utf8_general_ci;
+Now, from the MySQL command line:
+mysql> CREATE DATABASE sommelier CHARACTER SET utf8 COLLATE utf8_general_ci;
 
-    And finally, back in the Bash shell:
-    $ mysql -uroot --max_allowed_packet=16M -p --default-character-set=utf8 sommelier < wine_dump_utf8.sql
+And finally, back in the Bash shell:
+$ mysql -uroot --max_allowed_packet=16M -p --default-character-set=utf8 sommelier < wine_dump_utf8.sql
 
------------------------------------------------------
+\end{verbatim}
 
-mysql> select count(*) from tasting t join wine w on w.id = t.wine_id join wine_info wi on w.id = wi.id left join producers p on p.id = wi.producer_id left join wine_grape_variety gv on gv.id = wi.grape_variety where t.rating > 0 and t.notes <> '' and w.vintage > 1900 and w.vintage < 2013 and wi.appellation_id <> 0 order by rand() limit 2\G
-*************************** 1. row ***************************
-count(*): 14273
-1 row in set (0.20 sec)
+\subsubsection{Create Sommelier Tables}
 
---------------------------------------------------------
+This is the code for creating the new Sommelier database tables. The code is executed on a copy of the original database which has been duplicated with a new name. After creating the new tables, the old tables are deleted and the new tables are renamed to the old names (wine, author, tasting).
 
+\begin{verbatim}
 Content for sommelier.wine:
 
 CREATE TABLE `sommelier_wine` (
@@ -322,8 +129,6 @@ LEFT JOIN region r ON r.id = sr.region_id
 LEFT JOIN country c ON c.id = r.country_id
 ORDER BY w.id ASC;
 
-Content for sommelier.author:
-
 CREATE TABLE `sommelier_author` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL DEFAULT '',
@@ -336,8 +141,6 @@ INSERT INTO sommelier_author SELECT DISTINCT
 FROM
   tasting t
 WHERE t.author <> '';
-
-Content for sommelier.tasting:
 
 CREATE TABLE `sommelier_tasting` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -376,50 +179,8 @@ DROP TABLE tasting;
 DROP TABLE author;
 
 RENAME TABLE sommelier_wine TO wine;
-
 RENAME TABLE sommelier_tasting TO tasting;
-
 RENAME TABLE sommelier_author TO author;
-
-/*
-mysql> show tables;
-+---------------------+
-| Tables_in_sommelier |
-+---------------------+
-| author              |
-| tasting             |
-| wine                |
-+---------------------+
-3 rows in set (0.00 sec)
-*/
-
-
-// Author ids...
-
-+----+----------------------+
-| id | name                 |
-+----+----------------------+
-|  1 | Steven Spurrier      |
-|  2 | Beverley Blanning MW |
-|  3 | James Lawther MW     |
-|  4 | Josephine Butchart   |
-|  5 | Rosemary George MW   |
-|  6 | Norm Roby            |
-|  7 | Clive Coates MW      |
-|  8 | John Radford         |
-|  9 | Gerald D Boyd        |
-| 10 | Stephen Brook        |
-| 11 | Christelle Guibert   |
-| 12 | Alan Spencer         |
-| 13 | Serena Sutcliffe     |
-| 14 | Harriet Waugh        |
-| 15 | Andrew Jefford       |
-| 16 | David Peppercorn     |
-| 17 | Richard Mayson       |
-| 18 | Carolyn Holmes       |
-| 19 | Amy Wislocki         |
-+----+----------------------+
-
 \end{verbatim}
 
 \subsection{Sparsity} \label{app:datasparsity}
@@ -441,6 +202,152 @@ Table data obtained in the Python interactive interpreter by the following comma
 \begin{verbatim}
 import recommendations
 recommendations.getAuthorSimilarities()
+\end{verbatim}
+
+\section{API Design}
+
+\subsection{API Routes}
+
+\subsubsection{API Response: Index}\label{app:apiindex}
+\begin{verbatim}
+{
+    ``type'': ``list'',
+    ``self'': {
+        ``title'': ``Sommelier API'',
+        ``link'': ``/''
+    },
+    ``list'': [
+        {
+        ``title'': ``All Authors'',
+        ``link'': ``/authors/1''
+        },
+        {
+        ``title'': ``All Wines'',
+        ``link'': ``/wines/1''
+        }
+    ]
+}
+\end{verbatim}
+
+\subsubsection{API Response: Authors}\label{app:apiauthors}
+\begin{verbatim}
+{
+    ``type'': ``list'',
+    ``self'': {
+        ``title'': ``Authors, Page 1''
+        ``link'': ``/authors/1''
+    },
+    ``list'': [
+        /* maximum 50 links per page */
+        {
+        ``title'': ``Mr. Author'',
+        ``link'': ``/author/123''
+        },
+        {
+        ``title'': ``A.N. Other'',
+        ``link'': ``/author/234''
+        }
+    }
+}
+\end{verbatim}
+    
+\subsubsection{API Response: Author}\label{app:apiauthor}
+\begin{verbatim}
+{
+    ``type'': ``author'',
+    ``self'': {
+        ``title'': ``Mr. Author'',
+        ``name'': ``Mr. Author'',
+        ``tastings'': [
+            {
+            ``rating'': 5,
+            ``notes'': ``Tasting notes about the wine'',
+            ``tasting_date'': ``2003-04-01 00:00:00'',
+            ``wine'': {
+                ``title'': ``Wine Name 1990'',
+                ``link'': ``/wine/123''
+            }
+        ],
+        ``link'': ``/author/123''
+    },
+    ``related_content'': {
+        /* maximum of 5 wines */
+        ``recommended_wines'': [
+            {
+            ``title'': ``Chateau du Vin 1996'',
+            ``link'': ``/wine/234''
+            }
+        ],
+        /* maximum of 5 other authors */
+        ``similar_authors'': [
+            {
+            ``title'': ``A.N. Other'',
+            ``link'': ``/author/234''
+            }
+        ]
+    }
+}
+\end{verbatim}
+
+\subsubsection{API Response: Wines}\label{app:apiwines}
+\begin{verbatim}
+{
+    ``type'': ``list''
+    ``self'': {
+        ``title'': ``Wines, Page 1''
+        ``link'': ``/wines/1''
+    },
+    ``list'': [
+        /* maximum 50 links per page */
+        {
+        ``title'': ``Wine Name 1990'',
+        ``link'': ``/wine/123''
+        },
+        {
+        ``title'': ``Chateau du Vin 1996'',
+        ``link'': ``/wine/234''
+        }
+    }
+}
+\end{verbatim}
+
+\subsubsection{API Response: Wine}\label{app:apiwine}
+
+\begin{verbatim}
+{
+    ``type'': ``wine'',
+    ``self'': {
+        ``title'': ``Wine Name 1990'',
+        ``name'': ``Wine Name'',
+        ``vintage'': 1990,
+        ``producer'': ``Wine Producer Name'',
+        ``grape_variety'': ``Cabernet Sauvignon'',
+        ``appellation'': ``Pessac-Leognan'',
+        ``country'': ``France'',
+        ``region'': ``Bordeaux'',
+        ``sub_region'': ``Graves''
+        ``tastings'': [
+            {
+            ``rating'': 5,
+            ``notes'': ``Tasting notes about the wine'',
+            ``tasting_date'': ``2003-04-01 00:00:00'',
+            ``author'': {
+                ``title'': ``Mr. Author'',
+                ``link'': ``/author/123''
+            }
+        ],
+        ``link'': ``/wine/123''
+    },
+    ``related_content'': {
+        /* maximum of 5 wines */
+        ``similar_wines'': [
+            {
+            ``title'': ``Chateau du Vin 1996'',
+            ``link'': ``/wine/2345''
+            }
+        ]
+    }
+}
 \end{verbatim}
 
 \section{Experimental Code}
@@ -674,7 +581,53 @@ def getAuthorSimilarities(similarity=sim_pearson):
     return sims
 \end{verbatim}
 
-\section{Data Access}
+\section{Flask}
+
+\subsection{App.py} \label{app:flaskapp}
+
+\begin{verbatim}
+#!python
+
+# import and intialize Flask
+from flask import Flask, Response
+app = Flask(__name__)
+
+# import and initialize Sommelier
+from src.sommelier import Sommelier
+sommelier = Sommelier()
+
+@app.route('/')
+def sommelier_index():
+    response_body, keyed_args_dict = sommelier.index()
+    return Response(response_body, **keyed_args_dict)
+
+@app.route('/wines', defaults = {'page_num': 1}, methods = ['GET'])
+@app.route('/wines/<int:page_num>', methods = ['GET'])
+def sommelier_wines(page_num):
+    response_body, keyed_args_dict = sommelier.wine_page(page_num)
+    return Response(response_body, **keyed_args_dict)
+
+@app.route('/wine/<wine_id>', methods = ['GET'])
+def sommelier_wine(wine_id):
+    response_body, keyed_args_dict = sommelier.wine(wine_id)
+    return Response(response_body, **keyed_args_dict)
+
+@app.route('/authors', defaults = {'page_num': 1}, methods = ['GET'])
+@app.route('/authors/<int:page_num>', methods = ['GET'])
+def sommelier_authors(page_num):
+    response_body, keyed_args_dict = sommelier.author_page(page_num)
+    return Response(response_body, **keyed_args_dict)
+
+@app.route('/author/<author_id>', methods = ['GET'])
+def sommelier_author(author_id):
+    response_body, keyed_args_dict = sommelier.author(author_id)
+    return Response(response_body, **keyed_args_dict)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+\end{verbatim}
+
+\section{Sommelier Application}
 
 \subsection{Sommelier Database Connector}
 
@@ -722,150 +675,1451 @@ class SommelierDbConnector:
             self.connection.close()
 \end{verbatim}
 
-\section{API Design}
+\subsection{Sommelier}
 
-\subsection{API Routes}
-
-\subsubsection{API Response: Index}\label{app:apiindex}
 \begin{verbatim}
-{
-    ``type'': ``list'',
-    ``self'': {
-        ``title'': ``Sommelier API'',
-        ``link'': ``/''
-    },
-    ``list'': [
-        {
-        ``title'': ``All Authors'',
-        ``link'': ``/authors/1''
-        },
-        {
-        ``title'': ``All Wines'',
-        ``link'': ``/wines/1''
-        }
-    ]
-}
-\end{verbatim}
+#!python
 
-\subsubsection{API Response: Authors}\label{app:apiauthors}
-\begin{verbatim}
-{
-    ``type'': ``list'',
-    ``self'': {
-        ``title'': ``Authors, Page 1''
-        ``link'': ``/authors/1''
-    },
-    ``list'': [
-        /* maximum 50 links per page */
-        {
-        ``title'': ``Mr. Author'',
-        ``link'': ``/author/123''
-        },
-        {
-        ``title'': ``A.N. Other'',
-        ``link'': ``/author/234''
-        }
-    }
-}
-\end{verbatim}
+# import useful Flask libs
+from flask import request, Response, jsonify, json
+
+# import broker libs that will interface with the DB
+from broker import SommelierBroker
+
+# import the Sommelier recommender
+from recommender import SommelierPearsonCFRecommender, SommelierRecsysSVDRecommender
+
+class Sommelier():
+
+    def __init__(self, b=SommelierBroker(), r=SommelierRecsysSVDRecommender()):
+        self.broker = b
+        self.recommender = r
+
+    # Takes dict of content and generates JSON response with
+    # appropriate MIME type, HTTP status code etc.
+    def http_success_json(self, content):
+        response = json.dumps(content, encoding="utf-8")
+        response = ''.join(response.decode('unicode-escape').splitlines())
+        return response, { 'status': 200, 'mimetype': 'application/json; charset=utf-8' }
+
+    def http_not_found_json(self):
+        response = json.dumps("404: Not found", encoding="utf-8")
+        return response, { 'status': 404, 'mimetype': 'application/json; charset=utf-8' }
+
+    def index(self):
+        return self.http_success_json({
+            'self': {
+                'title': 'Sommelier'
+            },
+            'links': {
+                'wines': '/wines/1',
+                'authors': '/authors/1',
+            }
+        })
+
+    def wine_page(self, page_num):
+        records = self.broker.get_wine_page(page_num)
+        if not records:
+            return self.http_not_found_json()
+        num_pages = self.broker.get_num_wine_pages()
+        return self.http_success_json({
+            'self': {
+                'title': 'Wines page {}'.format(page_num),
+                'wines': records,
+            },
+            'next_page': '/wines/{}'.format(page_num + 1) if num_pages > page_num else 'none',
+            'previous_page': '/wines/{}'.format(page_num - 1) if page_num != 1 else 'none',
+        })
+
+    def wine(self, wine_id):
+        record = self.broker.get_wine(wine_id)
+        if not record:
+            return self.http_not_found_json()
+        recommendations = self.recommender.wines_for_wine(wine_id)
+        return self.http_success_json({
+            'self': {
+                'title': 'Wine page: {} {}'.format(record['name'], record['vintage']),
+                'wine': record,
+            },
+            'recommendations': recommendations
+        })
     
-\subsubsection{API Response: Author}\label{app:apiauthor}
-\begin{verbatim}
-{
-    ``type'': ``author'',
-    ``self'': {
-        ``title'': ``Mr. Author'',
-        ``name'': ``Mr. Author'',
-        ``tastings'': [
-            {
-            ``rating'': 5,
-            ``notes'': ``Tasting notes about the wine'',
-            ``tasting_date'': ``2003-04-01 00:00:00'',
-            ``wine'': {
-                ``title'': ``Wine Name 1990'',
-                ``link'': ``/wine/123''
+    def author_page(self, page_num):
+        records = self.broker.get_author_page(page_num)
+        if not records:
+            return self.http_not_found_json()
+        num_pages = self.broker.get_num_author_pages()
+        return self.http_success_json({
+            'authors': records, 
+            'num_pages': num_pages 
+        })
+
+    def author(self, author_id):
+        author_id = int(author_id)
+        record = self.broker.get_author(author_id)
+        if not record:
+            return self.http_not_found_json()
+        wines = self.recommender.wines_for_author(author_id)
+        authors = self.recommender.authors_for_author(author_id)
+        return self.http_success_json({
+            'author': record,
+            'recommendations': {
+                'wines': wines,
+                'authors': authors
             }
-        ],
-        ``link'': ``/author/123''
-    },
-    ``related_content'': {
-        /* maximum of 5 wines */
-        ``recommended_wines'': [
-            {
-            ``title'': ``Chateau du Vin 1996'',
-            ``link'': ``/wine/234''
-            }
-        ],
-        /* maximum of 5 other authors */
-        ``similar_authors'': [
-            {
-            ``title'': ``A.N. Other'',
-            ``link'': ``/author/234''
-            }
-        ]
-    }
-}
+        })
 \end{verbatim}
 
-\subsubsection{API Response: Wines}\label{app:apiwines}
+\subsection{Recommender}
+
+\subsubsection{Dependencies}
+
+These are all the dependencies loaded up for the recommender module
+
 \begin{verbatim}
-{
-    ``type'': ``list''
-    ``self'': {
-        ``title'': ``Wines, Page 1''
-        ``link'': ``/wines/1''
-    },
-    ``list'': [
-        /* maximum 50 links per page */
-        {
-        ``title'': ``Wine Name 1990'',
-        ``link'': ``/wine/123''
-        },
-        {
-        ``title'': ``Chateau du Vin 1996'',
-        ``link'': ``/wine/234''
+#!python
+
+# I load a whole load of dependencies at the top here. 
+# Obviously there is overhead involved in calling in all this stuff
+# but for the sake manageability I'm putting it all up here ;-)
+
+# general
+from __future__ import division
+import os
+import collections
+import json
+import time
+import random
+import math
+
+# text/language processing
+import re
+import nltk
+from nltk.corpus import stopwords
+
+# maths!
+import numpy
+from numpy import random
+import scipy
+
+# recsys-svd
+import recsys.algorithm
+from recsys.algorithm.factorize import SVD
+from recsys.evaluation.prediction import MAE, RMSE
+
+# Sommelier libs
+from broker import SommelierBroker
+\end{verbatim}
+
+\subsubsection{SommelierRecommenderBase}
+
+\begin{verbatim}
+# Abstract / base class to hold methods shared between all recommenders
+class SommelierRecommenderBase:
+
+
+    def __init__(self, b=SommelierBroker()):
+        self.broker = b
+
+    def data_file_directory(self):
+        return "".join([os.getcwd(), '/data/'])
+
+    def file_location(self, filename):
+        return "".join([self.data_file_directory(), filename])
+
+    def save_json_file(self, filename, data):
+        thefile = "".join([self.data_file_directory(), filename, '.json'])
+        with open(thefile, 'w') as outfile:
+            json.dump(data, outfile)
+
+    def load_json_file(self, filename):
+        print "".join(["Loading ", self.data_file_directory(), filename, '.json'])
+        return json.loads(open("".join([self.data_file_directory(), filename])).read())
+
+    # Preferences are returned as a dictionary of indexed lists of ratings, accompanied
+    # by a list of column ids which correspond to the ratings lists
+    #
+    # preferences = {
+    #   row_id: [ rating_1, rating_2, .. rating_N ]
+    # }
+    #
+    # column_ids = [ itemid_1, itemid_2, .. itemid_N ]
+    #
+    # @returns ( {} preferences, [] item_ids )
+    def preferences(self, tastings, row_key, column_key, rating_key='rating'):
+        if len(tastings) == 0:
+            # if there aren't any tastings then bail out...
+            return {}, []
+        preferences = {}
+        column_data = {}
+        column_ids = []
+        for tasting in tastings:
+            # tastings should be ordered by author and wine
+            preferences.setdefault(tasting[row_key], [])
+            column_data.setdefault(tasting[column_key], {})
+            column_data[tasting[column_key]].setdefault(tasting[row_key], tasting[rating_key])
+        for column in column_data:
+            for item in preferences.keys():
+                if item in column_data[column].keys():
+                    preferences[item].append(column_data[column][item])
+                else:
+                    preferences[item].append(0)
+                if column not in column_ids:
+                    column_ids.append(column)
+        return preferences, column_ids
+
+    # Open a given file which is in Movielens format
+    # and convert to tastings as used by Sommelier
+    def load_movielens_to_tastings(self, filename):
+        tastings = []
+        print "Loading Movielens data... (this may take a while)"
+        for line in open("".join([self.data_file_directory(), filename]), 'r'):
+            tastings.append(self.movielens_line_to_tasting(line))
+        print "Done."
+        return tastings
+            
+    # Converts a live from a Movielens file (as a string)
+    # to a tasting dict. This is for use in benchmarking and
+    # evaluation so that Movielens data can be used to 
+    # test the system. Movielens file format:
+    # UserId::ItemId::Rating::Timestamp
+    def movielens_line_to_tasting(self, line):
+        if line.find("::") != -1:
+            # this is double-colon separated
+            user_id, item_id, rating, timestamp = line.split("::")
+        elif line.find("\t") != -1:
+            # presumably this is tab-separated
+            user_id, item_id, rating, timestamp = line.split('\t')
+        else:
+            raise Exception("Cannot decode input string: {}".format(line))
+        tasting = {
+            'author_id': int(user_id),
+            'wine_id': int(item_id),
+            'rating': int(rating),
+            'tasting_date': str(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(timestamp))))
         }
-    }
-}
+        return tasting   
+
+    def tastings_to_movielens_format(self, tastings, separator="::"):
+        # make a list of strings which will be the lines in our 
+        # Movielens format data file. The format is:
+        # AuthorId::WineId::Rating::Timestamp
+        lines = []
+        for tasting in tastings:
+            # if the date is not valid set to 0, otherwise convert to Unix epoch
+            date = '0'
+            if 'tasting_date' in tasting and tasting['tasting_date'] != '0000-00-00 00:00:00':
+                date = str(time.mktime(time.strptime(tasting['tasting_date'], "%Y-%m-%d %H:%M:%S"))).encode('utf-8')
+            lines.append("".join([
+                str(tasting['author_id']).encode('utf-8'), separator, 
+                str(tasting['wine_id']).encode('utf-8'), separator, 
+                str(tasting['rating']).encode('utf-8'), separator, 
+                date, '']))
+        return lines
+
+    def pearson_r(self, preferences, key_a, key_b):
+        # get mutually rated items into two lists of ratings
+        items_a = []
+        items_b = []
+        # iterate over all items
+        for i in range(0, len(preferences[key_a])):
+            # if both a and b have rated the item then add it to their item lists
+            if preferences[key_a][i] != 0 and preferences[key_b][i] != 0:
+                items_a.append(preferences[key_a][i])
+                items_b.append(preferences[key_b][i])
+        if len(set(items_a)) <= 1 or len(set(items_b)) <= 1:
+            # one of the sets has standard deviation of 0 so pearson_r
+            # will be NaN - in this case return 0.0
+            return 0.0
+        if len(items_a) < 3:
+            # no items in common = no correlation
+            # less than 3 items in common = problematic for comparison
+            return 0.0
+        # we now how two lists of ratings for the same items
+        # these can be fed into the scipy.stats pearson r method
+        # we only want the first value [0] from the method as we
+        # don't need the 2-tail p value.
+        return scipy.stats.pearsonr(items_a, items_b)[0]
+
+    # Calculates mean absolute error for each row in the matrix
+    # using the MAE() class from python-recsys
+    # python-recsys evaluation documentation:
+    # http://ocelma.net/software/python-recsys/build/html/evaluation.html
+    def evaluate_matrices_mae(self, original_matrix, imputed_matrix):
+        return self.evaluate_matrices(original_matrix, imputed_matrix, evaluator=MAE())
+    
+    def evaluate_matrices_rmse(self, original_matrix, imputed_matrix):
+        return self.evaluate_matrices(original_matrix, imputed_matrix, evaluator=RMSE())
+
+    def recsys_evaluate_matrices(self, original_matrix, imputed_matrix, evaluator=MAE()):
+        total_error = 0
+        total_rows = 0
+        errors = ()
+        for row_i, row in enumerate(original_matrix):
+            # For each row build its list of non-zero values
+            # Build a corresponding list of values for the imputed matrix
+            row_values = []
+            imputed_values = []
+            for col_i, col in enumerate(row):
+                if row[col_i] > 0:
+                    row_values.append(col)
+                    imputed_values.append(imputed_matrix[row_i][col_i])
+            if len(row_values) == 0 or len(imputed_values) == 0:
+                continue
+            evaluator.load_ground_truth(row_values)
+            evaluator.load_test(imputed_values)
+            row_error = evaluator.compute()
+            errors = errors + (row_error, )
+            total_error += row_error
+            total_rows += 1
+        mean_total_error = 0.0
+        if total_rows > 0.0:
+            mean_total_error = total_error / total_rows
+        return errors, mean_total_error
 \end{verbatim}
 
-\subsubsection{API Response: Wine}\label{app:apiwine}
+\subsubsection{SommelierPearsonCFRecommender}
 
 \begin{verbatim}
-{
-    ``type'': ``wine'',
-    ``self'': {
-        ``title'': ``Wine Name 1990'',
-        ``name'': ``Wine Name'',
-        ``vintage'': 1990,
-        ``producer'': ``Wine Producer Name'',
-        ``grape_variety'': ``Cabernet Sauvignon'',
-        ``appellation'': ``Pessac-Leognan'',
-        ``country'': ``France'',
-        ``region'': ``Bordeaux'',
-        ``sub_region'': ``Graves''
-        ``tastings'': [
-            {
-            ``rating'': 5,
-            ``notes'': ``Tasting notes about the wine'',
-            ``tasting_date'': ``2003-04-01 00:00:00'',
-            ``author'': {
-                ``title'': ``Mr. Author'',
-                ``link'': ``/author/123''
-            }
-        ],
-        ``link'': ``/wine/123''
-    },
-    ``related_content'': {
-        /* maximum of 5 wines */
-        ``similar_wines'': [
-            {
-            ``title'': ``Chateau du Vin 1996'',
-            ``link'': ``/wine/2345''
-            }
-        ]
-    }
-}
+# This class implements recommendations largely based on the 
+# basic user-user, user-item and item-item methods
+# detailed by Segaran (2007, Ch.2)
+class SommelierPearsonCFRecommender(SommelierRecommenderBase):
+
+    def __init__(self, b=SommelierBroker()):
+        self.broker = b
+
+    # using a weighted average
+    def wines_for_author(self, author_id, max_items=5):
+        author_id = int(author_id)
+        preferences, wine_ids = self.author_preferences(author_id)
+        rankings = self.sorted_rankings(author_id, preferences, max_items)
+        recommended_wine_ids = [ wine_ids[i] for r, i in rankings ]
+        if len(recommended_wine_ids) > 0:
+            return self.broker.get_wines_by_id(recommended_wine_ids)
+        # if we couldn't find any wines to recommend, return empty
+        return []
+        
+
+    def authors_for_author(self, author_id, max_items=5):
+        author_id = int(author_id)
+        preferences, wine_ids = self.author_preferences(author_id)
+        return self.sorted_similarities(author_id, preferences)
+
+    def wines_for_wine(self, wine_id, max_items=5):
+        wine_id = int(wine_id)
+        preferences, wine_ids = self.wine_preferences(wine_id)
+        rankings = self.sorted_rankings(wine_id, preferences, max_items=5)
+        recommended_wine_ids = [ wine_ids[i] for r, i in rankings ]
+        if len(recommended_wine_ids) > 0:
+            return self.broker.get_wines_by_id(recommended_wine_ids)
+        # if we couldn't find any wines to recommend, return empty
+        return []
+
+    def author_preferences(self, author_id):
+        tastings = self.broker.get_comparable_author_tastings(author_id)
+        return self.preferences(tastings, 'author_id', 'wine_id')
+
+    def wine_preferences(self, wine_id):
+        tastings = self.broker.get_comparable_wine_tastings(wine_id)
+        return self.preferences(tastings, 'wine_id', 'author_id')
+
+    def sorted_similarities(self, subject_id, preferences, max_items=5):
+        similarities = []
+        for item_id in preferences.keys():
+            if item_id == subject_id:
+                # we don't need to compare our subject with itself
+                continue
+            similarity = self.pearson_r(preferences, subject_id, item_id)
+            # only return positive correlations
+            if similarity > 0:
+                similarities.append((item_id, similarity))
+        sorted_similarities = sorted(similarities, key=lambda sim: sim[1], reverse=True)
+        return sorted_similarities[0:max_items]
+
+    def sorted_rankings(self, subject_id, preferences, max_items=5):
+        totals = {}
+        similarity_sums = {}
+        if subject_id not in preferences:
+            # we can't recommend for this subject
+            return []
+        subject_preferences = preferences[subject_id]
+        for other in preferences.keys():
+            if other == subject_id:
+                # don't compare subject to themself
+                continue
+            similarity = self.pearson_r(preferences, subject_id, other)
+            if similarity <= 0:
+                # no similarity is a waste of time
+                continue
+            for i in range(0, len(preferences[other])):
+                if preferences[subject_id][i] == 0 and preferences[other][i] > 0:
+                    totals.setdefault(i, 0)
+                    totals[i] += preferences[other][i] * similarity
+                    similarity_sums.setdefault(i, 0)
+                    similarity_sums[i] += similarity
+        if not totals:
+            # there are no recommendations to be made :-(
+            return ()
+        rankings = [(total/similarity_sums[item], item) for item, total in totals.items()]
+        return sorted(rankings, key=lambda sim: sim[0], reverse=True )[0:max_items]
 \end{verbatim}
 
+\subsubsection{SommelierRecsysSVDRecommender}
+
+\begin{verbatim}
+# Implements SommelierRecommender using 
+# python-recsys SVD library to make recommendations
+class SommelierRecsysSVDRecommender(SommelierRecommenderBase):
+
+    # filename for raw tasting data in format used by MovieLens
+    # format (rows): UserId::ItemId::Rating::UnixTime
+    tastings_movielens_format = 'tastings_movielens_format'
+
+    # filename for python-recsys zip outfile
+    tastings_recsys_svd = 'recsys_svd_data'
+
+    def __init__(self, b=SommelierBroker()):
+        self.broker = b
+
+    def wines_for_author(self, author_id):
+        svd = self.load_recsys_svd()
+        # there may not be recommendations for this author, which would
+        # raise a KeyError. We don't want a KeyError, an empty list is fine!
+        try:
+            recommendations = svd.recommend(int(author_id), is_row=False)
+        except:
+            recommendations = []
+        wine_ids = []
+        for recommendation in recommendations:
+            wine_ids.append(recommendation[0])
+        recommended_wines = []
+        if len(wine_ids) > 0:
+            wines = self.broker.get_wines_by_id(wine_ids)
+            for wine in wines:
+                recommended_wines.append({
+                    'name': wine['name'],
+                    'vintage': wine['vintage'],
+                    'id': wine['id']
+                })
+        return recommended_wines
+
+    def authors_for_author(self, author_id):
+        return []
+
+    def wines_for_wine(self, wine_id):
+        svd = self.load_recsys_svd()
+        # there may not be recommendations for this author, which would
+        # raise a KeyError. We don't want a KeyError, an empty list is fine!
+        try:
+            # get similar wines, but pop() the first item off as it is the current wine
+            recommendations = svd.similar(int(wine_id))
+            recommendations.pop(0)
+        except:
+            recommendations = []
+        wine_ids = []
+        for recommendation in recommendations:
+            wine_ids.append(recommendation[0])
+        similar_wines = []
+        if len(wine_ids) > 0:
+            wines = self.broker.get_wines_by_id(wine_ids)
+            for wine in wines:
+                similar_wines.append({
+                    'name': wine['name'],
+                    'vintage': wine['vintage'],
+                    'id': wine['id']
+                })
+        return similar_wines
+
+    # Decomposes the matrix of tastings data using recsys-svd's SVD()
+    # and saves the output matices etc. to a zip file using SVD()'s built-in method
+    def impute_to_file(self, tastings, k=100, min_values=2, verbose=True):
+        # create a data file in Movielens format with the tastings data
+        self.save_tastings_to_movielens_format_file(tastings)
+        # for logging/testing purposes we may like this verbose
+        if verbose:
+            recsys.algorithm.VERBOSE = True
+        svd = SVD()
+        # load source data, perform SVD, save to zip file
+        source_file = self.file_location(self.tastings_movielens_format)
+        svd.load_data(filename=source_file, sep='::', format={'col':0, 'row':1, 'value':2, 'ids': int})
+        outfile = self.file_location(self.tastings_recsys_svd)
+        svd.compute(k=k, min_values=min_values, pre_normalize=None, mean_center=True, post_normalize=True, savefile=outfile)
+        return svd
+
+    def save_tastings_to_movielens_format_file(self, tastings):
+        movielens_lines = self.tastings_to_movielens_format(tastings)
+        outfile = self.file_location(self.tastings_movielens_format)
+        with open(outfile, 'w') as datafile:
+            for line in movielens_lines:
+                datafile.write(line)
+
+    # loads a recsys-svd data file stored to disk by the impute_to_file() method
+    def load_recsys_svd(self):
+        from recsys.algorithm.factorize import SVD
+        svd = []
+        # if there's an svd file, load it - otherwise we're out of luck as
+        # we don't want to build these matrices at runtime!
+        tastings_svd_file = self.file_location(self.tastings_recsys_svd)
+        if os.path.isfile(tastings_svd_file):
+            svd = SVD(tastings_svd_file)
+        # return the recsys SVD object, ready to make some recommendations...
+        return svd
+\end{verbatim}
+
+\subsubsection{SommelierYeungMFRecommender} \label{app:yeungmf}
+
+\begin{verbatim}
+# Implements SommelierRecommender using
+# Albert Yeung's example Matrix Factorization code
+# combined with basic CF techniques outlined in
+# Segaran's "Collective Intelligence" (2007, Ch. 2)
+class SommelierYeungMFRecommender(SommelierRecommenderBase):
+
+    # filename for user/item matrix in lists format
+    # format: [[1,2,3][4,5,6]..]
+    original_matrix = "tastings_yeung_matrix"
+
+    # filename for user/item matrix in lists format
+    # format: [[1,2,3][4,5,6]..]
+    test_data_matrix = "tastings_yeung_test_matrix_{}percent"
+
+    # filename for factored and reconstructed matrix, using Yeung's simple MF algorithm
+    # format: [[1,2,3][4,5,6]..]
+    reconstructed_matrix = "reconstructed_yeung_matrix_k{}_steps{}"
+
+    factors_matrix = "imputed_yeung_factors_k{}_steps{}"
+
+    weights_matrix = "imputed_yeung_weights_k{}_steps{}"   
+
+    multiple_factorization_metas = "multiple_factorization_metas_k{}_steps{}"   
+
+    def __init__(self, b=SommelierBroker()):
+        self.broker = b
+
+    def wines_for_author(self, author_id):
+        return []
+
+    def authors_for_author(self, author_id):
+        return []
+
+    def wines_for_wine(self, item_id):
+        return []
+
+    def impute_to_file(self, tastings):
+        matrix = self.generate_lists_ui_matrix(tastings, self.original_matrix)
+        factored_matrix = self.yeung_factor_matrix(matrix, steps=1000, factors=10, evaluator='MAE')[0]
+        return []
+
+    # load the sparse ui matrix from disk
+    def load_lists_ui_matrix(self):
+        matrix_data = self.load_json_file(self.original_matrix)
+        matrix = matrix_data["ratings"]
+        author_ids = matrix_data["author_ids"]
+        wine_ids = matrix_data["wine_ids"]
+        return matrix, author_ids, wine_ids
+
+    def generate_lists_ui_matrix(self, tastings={}, outfile=''):
+        if not tastings:
+            # get all the tastings from the database
+            tastings = self.broker.get_tastings()
+        # make a dict with an entry for each author, with wines and ratings:
+        # { author: { wine_id: rating, wine_id: rating, ... } ... }
+        author_ratings = {}
+        wine_ids = []
+        for tasting in tastings:
+            author_ratings.setdefault(tasting['author_id'], {})
+            author_ratings[tasting['author_id']][tasting['wine_id']] = tasting['rating']
+            if tasting['wine_id'] not in wine_ids:
+                wine_ids.append(tasting['wine_id'])
+        # for each author iterate over wines and make a tuple with ratings for each wine, or 0.0
+        lists_matrix = []
+        author_ids = []
+        for author_id in author_ratings:
+            author = author_ratings[author_id]
+            author_ids.append(author_id)
+            author_wine_list = []
+            for wine_id in wine_ids:
+                # if there is a key in the author dict for this wine, take the rating from that
+                if wine_id in author:
+                    author_wine_list.append(float(author[wine_id]))
+                # otherwise append a 0.0
+                else:
+                    author_wine_list.append(0.0)
+            lists_matrix.append(author_wine_list)
+        if outfile:
+            self.save_json_file(outfile, { "ratings": lists_matrix, "author_ids": author_ids, "wine_ids": wine_ids })
+        return lists_matrix, author_ids, wine_ids
+
+    # Copied from Albert Yeung: http://www.quuxlabs.com/wp-content/uploads/2010/09/mf.py_.txt
+    # This method factors the given matrix into
+    def yeung_factor_matrix(self, matrix=[], steps=5000, factors=10, evaluator=MAE(), verbose=True):
+        if not matrix:
+            matrix = self.load_lists_ui_matrix()
+        R = numpy.array(matrix)
+        N = len(R)
+        M = len(R[0])
+        K = factors
+        P = numpy.random.rand(N, K)
+        Q = numpy.random.rand(M, K)
+        nP, nQ, e = self.yeung_matrix_factorization(R, P, Q, K, steps, verbose=verbose)
+        if verbose: print "Final error: {}".format(e)
+        self.save_json_file(self.factors_matrix.format(K, steps), nP.tolist())
+        self.save_json_file(self.weights_matrix.format(K, steps), nQ.tolist())
+        nR = numpy.dot(nP, nQ.T)
+        if verbose: print "Saving to JSON file..."
+        self.save_json_file(self.reconstructed_matrix.format(K, steps), nR.tolist())
+        if verbose: print "Evaluation using {}...".format(evaluator.__class__.__name__)
+        errors, mean_total_error = self.recsys_evaluate_matrices(R, nR, evaluator)
+        if verbose: print "Mean total error: {}".format(mean_total_error)
+        return nR, nP, nQ, errors, mean_total_error
+
+    # Copied from Albert Yeung: http://www.quuxlabs.com/wp-content/uploads/2010/09/mf.py_.txt
+    def yeung_matrix_factorization(self, R, P, Q, K, steps=5000, alpha=0.0002, beta=0.02, verbose=True):
+        if verbose:
+            print "Matrix Factorization"
+            print "Steps: {}".format(steps)
+            print "Factors: {}".format(K)
+        Q = Q.T
+        s = 0
+        for step in xrange(steps):
+            s+=1
+            if verbose: print "Step {} / {}".format(s,steps)
+            for i in xrange(len(R)):
+                for j in xrange(len(R[i])):
+                    if R[i][j] > 0:
+                        eij = R[i][j] - numpy.dot(P[i,:],Q[:,j])
+                        for k in xrange(K):
+                            P[i][k] = P[i][k] + alpha * (2 * eij * Q[k][j] - beta * P[i][k])
+                            Q[k][j] = Q[k][j] + alpha * (2 * eij * P[i][k] - beta * Q[k][j])
+            eR = numpy.dot(P,Q)
+            e = 0
+            for i in xrange(len(R)):
+                for j in xrange(len(R[i])):
+                    if R[i][j] > 0:
+                        e = e + pow(R[i][j] - numpy.dot(P[i,:],Q[:,j]), 2)
+                        for k in xrange(K):
+                            e = e + (beta/2) * ( pow(P[i][k],2) + pow(Q[k][j],2) )
+            if verbose: print "Error: {}".format(e)
+            if e < 0.001:
+                break
+        return P, Q.T, e
+
+    # Will run any number of Yeung factorizations of a matrix, iterating over 
+    # a list of configuration argument dicts to be passed to the factorization method
+    def multiple_factorizations(self, matrix, config_args):
+        sparsity = self.sparsity_percent(matrix)
+        print "Sparsity of matrix for multiple factorizations: {}%".format(sparsity)
+        metas = []
+        for args in config_args:
+            start = int(time.time())
+            fm = self.yeung_factor_matrix(matrix, **args)
+            end = int(time.time())
+            # get metas from result
+            ue = fm[3]
+            te = fm[4]
+            t = end - start
+            metas.append({"args": args, "user_errors": ue, "total_errors": te, "execution_time_seconds": t})
+            self.save_json_file(self.multiple_factorization_metas.format(args["factors"], args["steps"]), metas)
+        return metas
+
+    def predict_rating(self, imputed_matrix, authors, wines, author_id, wine_id):
+        if author_id in authors:
+            author_idx = authors.index(author_id)
+            if wine_id in wines:
+                wine_idx = wines.index(wine_id)
+                if author_idx < len(imputed_matrix):
+                    if wine_idx < len(imputed_matrix[author_idx]):
+                        return imputed_matrix[author_idx][wine_idx]
+                    raise Exception("Wine index out of bounds for matrix")
+                raise Exception("Author index out of bounds for matrix")
+            raise Exception("Wine index not found for imputed matrix")
+        raise Exception("Author index not found for imputed matrix")
+
+    # Get all tastings, randomly split into train and test portions
+    # Generate a matrix for the test portion of the data
+    # Factor this matrix using the **config_args passed into the method
+    # Iterate over the training portion of the data, checking the
+    # real ratings against those imputed by the factorization
+    # Record MAE for each author, standard deviation of error for 
+    # each author, total MAE, total standard deviation of error, 
+    # and finally a normalised MAE for good measure...
+    def split_data_evaluation(self, config_args, matrix_file=[], tastings=[], percent_train=80):
+        print "Test/train split: {}/{}".format(percent_train, 100-percent_train)
+        print "Randomly splitting tastings for testing..."
+        train_tastings, test_tastings = self.split_train_test_tastings(tastings, percent_train)
+        print "Generating matrix for testing..."
+        train_matrix, author_ids, wine_ids = self.generate_lists_ui_matrix(train_tastings, self.test_data_matrix)
+        print "num authors {}".format(len(train_matrix))
+        print "num items {}".format(len(train_matrix[0]))
+        for args in config_args:
+            print "Evaluation for args: {}".format(args)
+            imputed_matrix = self.yeung_factor_matrix(train_matrix, **args)[0]
+            total_error = 0.0
+            num_tastings = 0
+            errors = []
+            author_errors = {}
+            missing_authors = 0
+            missing_wines = 0
+            for tasting in test_tastings:
+                if tasting["author_id"] not in author_ids:
+                    # there were no items for this author in the test data
+                    missing_authors +=1
+                    continue
+                if tasting["wine_id"] not in wine_ids:
+                    # there were no items for this wine in the test data
+                    missing_wines += 1
+                    continue
+                prediction = self.predict_rating(imputed_matrix, author_ids, wine_ids, tasting["author_id"], tasting["wine_id"])
+                rating = float(tasting['rating'])
+                error = abs(rating - prediction)
+                author_errors.setdefault(tasting['author_id'], [])
+                author_errors[tasting['author_id']].append(error)
+                errors.append(error)
+                total_error += error
+                num_tastings += 1
+            print "Missing authors: {}, missing wines: {}".format(missing_authors, missing_wines)
+            author_stds = {}
+            for author_id in author_errors:
+                # author standard deviation
+                author_stds.setdefault(author_id, 0.0)
+                author_stds[author_id] = numpy.std(author_errors[author_id])
+            mae = total_error / num_tastings
+            # we can get the mae as a normalised value (between 0 and 1) by dividing by the difference between the
+            # highest and lowest rating which we know is (5 - 0) = 5
+            nmae = mae / 5
+            # total standard deviation
+            total_std = numpy.std(errors)
+            print "NMAE {}".format(nmae)
+            print "MAE {}".format(mae)
+            print "Total SD {}".format(total_std)
+            print "Author SDs {}".format(author_stds)
+
+    def split_data_evaluate_movielens_file(self, filepath, config_args, percent_train=80):
+        tastings = self.load_movielens_to_tastings(filepath)
+        print "Number of tastings: {}".format(len(tastings))
+        self.split_data_evaluation(config_args, tastings=tastings, percent_train=percent_train)
+
+    def split_train_test_tastings(self, tastings, percent_train=80):
+        if percent_train > 100:
+            raise Exception("percent_test must be 100 or less")
+        num_tastings = len(tastings)
+        num_train = math.ceil(num_tastings * ( percent_train / 100 ))
+        # now create an array of length num_tastings, with num_test amount of 1s
+        # randomly distributed within it
+        ones = numpy.ones((num_train)).tolist()
+        zeros = numpy.zeros((num_tastings - num_train)).tolist()
+        ones_and_zeros = ones + zeros
+        random.shuffle(ones_and_zeros)
+        test_tastings = []
+        train_tastings = []
+        for tasting in tastings:
+            if ones_and_zeros.pop() == 1:
+                train_tastings.append(tasting)
+            else:
+                test_tastings.append(tasting)
+        return train_tastings, test_tastings 
+
+    def sparsity_percent(self, matrix):
+        zero_count = 0.0
+        total_count = 0.0
+        for row in matrix:
+            for col in row:
+                total_count += 1.0
+                if col == 0.0:
+                    zero_count += 1.0
+        return ( zero_count / total_count ) * 100.0
+\end{verbatim}
+
+\subsubsection{SommelierTextMFRecommender}
+
+\begin{verbatim}
+# Implements SommelierRecommender performing
+# matrix decomposition based around word frequency to
+# generate topics which can be used to predict similarities
+# between wines based on the language used about them, and
+# between authors based on the language they use. Similar to
+# the techniques outlined by Segaran in "Collective 
+# Intelligence" (2007, Ch. 10), but applied in a different
+# context.
+#
+## UNIMPLEMENTED: THIS CLASS DOES NOT WORK ... YET
+class SommelierTextMFRecommender(SommelierYeungMFRecommender):
+
+    # filename for user/item matrix in lists format
+    # format: [[1,2,3][4,5,6]..]
+    original_matrix = "tastings_text_mf_matrix"
+
+    # filename for factored and reconstructed matrix, using Yeung's simple MF algorithm
+    # format: [[1,2,3][4,5,6]..]
+    reconstructed_matrix = "reconstructed_text_mf_matrix"
+
+    factors_matrix = "imputed_text_mf_factors"
+
+    weights_matrix = "imputed_text_mf_weights"   
+
+    def __init__(self, b=SommelierBroker()):
+        self.broker = b
+
+    def wines_for_author(self, author_id):
+        return []
+
+    def authors_for_author(self, author_id):
+        return []
+
+    def wines_for_wine(self, item_id):
+        return []
+
+    def impute_to_file(self, tastings, steps=5000):
+        matrix = self.get_tastings_word_matrix(tastings)
+        self.save_json_file(self.original_matrix, matrix)
+        self.yeung_factor_matrix(matrix=matrix, steps=steps)
+        return matrix
+
+    # one row for each tasting, one column for each word
+    # with counts of occurrences of the word in the tasting note
+    def get_tastings_word_matrix(self, tastings):
+        words = self.get_words(tastings)
+        rows = []
+        for t in tastings:
+            row = []
+            t_words = re.split('\W+', t['notes'])
+            for w in words:
+                row.append(t_words.count(w))
+            rows.append(row)
+        return rows
+
+    def get_words(self, tastings):
+        words = []
+        dist = self.tastings_frequency_distribution(tastings, min_values=4)
+        for w in dist:
+            words.append(w)
+        return words
+
+    # gets all words metioned >= min_values times, excluding stopwords
+    def tastings_frequency_distribution(self, tastings, min_values=4):
+        words = []
+        for tasting in tastings:
+            words += re.split('\W+', tasting['notes'])
+        filtered_words = [w.lower() for w in words if not w in stopwords.words('english')]
+        dist = nltk.FreqDist(filtered_words)
+        words = dist.samples()
+        for w in words:
+            if dist[w] < min_values:
+                dist.pop(w)
+        return dist
+\end{verbatim}
+
+\subsubsection{SommelierRecommender}
+
+\begin{verbatim}
+# Facade class for recommenders. May have specific recommender implementation
+# injected into it or depend on default defined in its signature.
+class SommelierRecommender:
+
+    def __init__(self, b=SommelierBroker(), r=SommelierPearsonCFRecommender()):
+        self.broker = b
+        self.recommender = r
+
+    def wines_for_author(self, author_id):
+        return self.recommender.wines_for_author(author_id)
+
+    def authors_for_author(self, author_id):
+        return self.recommender.authors_for_author(author_id)
+
+    def wines_for_wine(self, wine_id):
+        return self.recommender.wines_for_wine(wine_id)
+
+\end{verbatim}
+
+\subsection{Sommelier Broker}
+
+\begin{verbatim}
+#!python
+import math
+from dbconnector import SommelierDbConnector
+
+class SommelierBroker:
+
+    tastings_query = """
+        SELECT *
+        FROM tasting t
+        WHERE author_id <> 0
+    """
+    wine_ids_query = """
+        SELECT id 
+        FROM wine w
+        ORDER BY id ASC
+        """
+    wines_by_id_query = """
+        SELECT *
+        FROM wine w
+        WHERE w.id
+        IN ({})
+    """
+    wines_query = """
+        SELECT * 
+        FROM wine w
+        ORDER BY id ASC
+        """
+    wine_page_query = """
+        SELECT * 
+        FROM wine w
+        LIMIT {} OFFSET {}
+        """
+    wine_query  = """
+        SELECT w.*, t.*, a.name AS author FROM wine w
+        LEFT JOIN tasting t ON w.id = t.wine_id 
+        LEFT JOIN author a ON t.author_id = a.id
+        WHERE w.id = {}
+        """
+    wine_count_query = """
+        SELECT COUNT(*) AS count FROM wine
+        """
+    authors_query = """
+        SELECT * 
+        FROM author a
+        ORDER BY id ASC
+        """
+    author_ids_query = """
+        SELECT id 
+        FROM author a
+        """
+    author_page_query = """
+        SELECT * 
+        FROM author a
+        LIMIT {} OFFSET {}
+        """
+    author_query  = """
+        SELECT a.*, t.*, w.name as wine FROM author a
+        JOIN tasting t ON t.author_id = a.id
+        JOIN wine w ON t.wine_id = w.id
+        WHERE a.id = {}
+        """
+    author_count_query = """
+        SELECT COUNT(*) AS count FROM author a
+        """
+    # scalability issues w/ multiple sub-queries ?
+    comparable_author_tastings_query = """
+        SELECT t.*, a.*
+        FROM tasting t
+        JOIN author a ON t.author_id = a.id
+        WHERE t.author_id <> 0
+        AND t.author_id IN (
+            SELECT DISTINCT t2.author_id
+            FROM tasting t2
+            WHERE t2.wine_id IN ( 
+                SELECT t3.wine_id 
+                FROM tasting t3 
+                WHERE t3.author_id = {}
+            )
+        )
+        ORDER BY t.author_id ASC, t.wine_id ASC
+    """
+    # scalability issues w/ multiple sub-queries ?
+    comparable_wine_tastings_query = """
+        SELECT t.*, a.*
+        FROM tasting t
+        JOIN author a ON t.author_id = a.id
+        AND t.wine_id IN (
+            SELECT DISTINCT t2.wine_id
+            FROM tasting t2
+            WHERE t2.author_id IN ( 
+                SELECT t3.author_id 
+                FROM tasting t3 
+                WHERE t3.wine_id = {}
+            )
+        )
+        ORDER BY t.wine_id ASC, t.author_id ASC
+    """
+    page_size = 50
+
+    def __init__(self, db=SommelierDbConnector()):
+        self.db = db
+    
+    def get_tastings(self):
+        self.db.execute(self.tastings_query)
+        return self.db.fetch_all()
+
+    def get_wines(self):
+        self.db.execute(self.wines_query)
+        return self.db.fetch_all()
+
+    def get_wine_ids(self):
+        self.db.execute(self.wine_ids_query)
+        return self.db.fetch_all()
+
+    def get_wines_by_id(self, wine_ids):
+        self.db.execute(self.wines_by_id_query.format(",".join(map(str, wine_ids))))
+        return self.db.fetch_all()
+
+    def get_wine_page(self, pagenum=1):
+        pageparams = self.page_size, self.page_size * (pagenum - 1)
+        self.db.execute(self.wine_page_query.format(*pageparams))
+        return self.db.fetch_all()
+
+    def get_num_wine_pages(self):
+        self.db.execute(self.wine_count_query)
+        result = self.db.fetch_one()
+        count = float( result['count'] );
+        return int( math.ceil( count / self.page_size ) )
+
+    def get_wine(self, wine_id):
+        self.db.execute(self.wine_query.format(wine_id))
+        result = self.db.fetch_one()
+        if result is None: return {}
+        wine = {
+            'name': result['name'],
+            'vintage': result['vintage'],
+            'grape_variety': result['grape_variety'],
+            'appellation': result['appellation'],
+            'sub_region': result['sub_region'],
+            'region': result['region'],
+            'country': result['country'],
+            'producer': result['producer'],
+            'tastings': []
+        }
+        if result['author'] is not None:
+            wine['tastings'].append({
+                'author': result['author'],
+                'notes': result['notes'],
+                'rating': result['rating'],
+                'tasting_date': result['tasting_date']
+            })
+            results = self.db.fetch_all()
+            for row in results:
+                wine['tastings'].append({
+                    'author': row['author'],
+                    'notes': row['notes'],
+                    'rating': row['rating'],
+                    'tasting_date': row['tasting_date']
+                })
+        return wine
+
+    def get_authors(self):
+        self.db.execute(self.authors_query)
+        return self.db.fetch_all()
+
+    # returns a vector of ids
+    def get_author_ids(self):
+        self.db.execute(self.author_ids_query)
+        results = self.db.fetch_all()
+        ids = []
+        for row in results:
+            ids.append(row['id'])
+        return ids
+
+    def get_author_page(self, pagenum=1):
+        pageparams = self.page_size, self.page_size * (pagenum - 1)
+        self.db.execute(self.author_page_query.format(*pageparams))
+        return self.db.fetch_all()
+
+    def get_num_author_pages(self):
+        self.db.execute(self.author_count_query)
+        result = self.db.fetch_one()
+        count = float( result['count'] );
+        return int( math.ceil( count / self.page_size ) )
+
+    def get_author(self, authorid):
+        self.db.execute(self.author_query.format(authorid))
+        result = self.db.fetch_one()
+        if result is None: return {}
+        author = {
+            'name': result['name'],
+            'tastings': []
+        }
+        if result['wine'] is not None:
+            author['tastings'].append({
+                'wine': result['wine'],
+                'notes': result['notes'],
+                'rating': result['rating']
+            })
+            results = self.db.fetch_all()
+            for row in results:
+                author['tastings'].append({
+                    'wine': row['wine'],
+                    'notes': row['notes'],
+                    'rating': row['rating']
+                })
+        return author
+
+    def get_comparable_author_tastings(self, author_id):
+        self.db.execute(self.comparable_author_tastings_query.format(author_id))
+        results = self.db.fetch_all()
+        return results
+
+    def get_comparable_wine_tastings(self, wine_id):
+        self.db.execute(self.comparable_wine_tastings_query.format(wine_id))
+        results = self.db.fetch_all()
+        return results
+\end{verbatim}
+
+\section{Tests}
+
+\subsection{Unit Tests} \label{app:unittests}
+
+\subsubsection{Sommelier Tests}
+
+\begin{verbatim}
+#!python
+import unittest
+from mock import Mock, MagicMock
+import sommelier 
+from sommelier import Sommelier
+
+# Tests for the sommelier class, making sure it returns the right content in the 
+# right format for each request, and that its auxiliary methods, like
+# http_success_json() work properly
+
+class SommelierTest(unittest.TestCase):
+
+    def setUp(self):
+        mock_broker = MagicMock()
+        mock_broker.get_wine_page = MagicMock(return_value={'items':['item','item']})
+        mock_broker.get_num_wine_pages = MagicMock(return_value=23)
+        mock_broker.get_author_page = MagicMock(return_value={'items':['item','item']})
+        mock_broker.get_num_author_pages = MagicMock(return_value=23)
+        mock_broker.get_wine = MagicMock(return_value={'wine':'a wine'})
+        mock_broker.get_author = MagicMock(return_value={'author':'an author'})
+        mock_recommender = MagicMock()
+        mock_recommender.wines_for_wine = MagicMock(return_value=['wine','wine','wine'])
+        mock_recommender.wines_for_author = MagicMock(return_value=['wine for author','wine','wine'])
+        mock_recommender.authors_for_author = MagicMock(return_value=['authors for author','author','author'])
+        self.sommelier = Sommelier(b=mock_broker, r=mock_recommender)
+ 
+    def test_http_success_json(self):
+        # method takes any dict as input
+        test_content = { 'test': 'test content' }
+        # should convert that dict into a UTF-8 JSON string, returned as first item of tuple
+        expected_content = u'{"test": "test content"}'
+        # also expected to return a dict with HTTP status and MIME Type parameters
+        # - these will be converted to keyed arguments to Response() later using **
+        expected_keyed_args_dict = { 'status': 200, 'mimetype': 'application/json; charset=utf-8' }
+        response_body, keyed_args_dict = self.sommelier.http_success_json(test_content)
+        self.assertEqual(expected_content, response_body)
+        self.assertEqual(expected_keyed_args_dict, keyed_args_dict)
+
+    def test_wines_page(self):
+        expected_response_body = u'{"num_pages": 23, "wines": {"items": ["item", "item"]}}'
+        response_body, keyed_args_dict = self.sommelier.wine_page(1)
+        self.assertEqual(expected_response_body, response_body)
+
+    def test_wine(self):
+        expected_response_body = u'{"recommendations": ["wine", "wine", "wine"], "wine": {"wine": "a wine"}}'
+        response_body, keyed_args_dict = self.sommelier.wine(123)
+        self.assertEqual(expected_response_body, response_body)
+
+    def test_authors_page(self):
+        expected_response_body = u'{"num_pages": 23, "authors": {"items": ["item", "item"]}}'
+        response_body, keyed_args_dict = self.sommelier.author_page(1)
+        self.assertEqual(expected_response_body, response_body)
+
+    def test_author(self):
+        expected_response_body = u'{"recommendations": {"authors": ["authors for author", "author", "author"], "wines": ["wine for author", "wine", "wine"]}, "author": {"author": "an author"}}'
+        response_body, keyed_args_dict = self.sommelier.author(123)
+        self.assertEqual(expected_response_body, response_body)
+
+\end{verbatim}
+
+\subsubsection{Recommender Tests}
+
+\begin{verbatim}
+#!python
+import unittest
+from mock import Mock, MagicMock
+
+# import all our recommenders...
+from recommender import SommelierRecommenderBase, SommelierPearsonCFRecommender, SommelierYeungMFRecommender, SommelierRecsysSVDRecommender
+
+# Tests for the sommelier recommender class
+# This does not test some very small methods, such as
+# those for saving and retrieving JSON files
+class RecommenderTest(unittest.TestCase):
+
+    dummy_tastings = [
+        { "author_id": 1, "wine_id": 5, "rating": 9 },
+        { "author_id": 2, "wine_id": 6, "rating": 10 },
+        { "author_id": 3, "wine_id": 7, "rating": 11 },
+        { "author_id": 4, "wine_id": 8, "rating": 12 }]
+
+    expected_preferences_1 = {
+        1: [ 0, 9, 0, 0 ],
+        2: [ 0, 0, 10, 0 ],
+        3: [ 0, 0, 0, 11 ],
+        4: [ 12, 0, 0, 0 ]
+        }, [8, 5, 6, 7]
+
+    expected_preferences_2 = {
+        5: [ 9, 0, 0, 0 ],
+        6: [ 0, 10, 0, 0 ],
+        7: [ 0, 0, 11, 0 ],
+        8: [ 0, 0, 0, 12 ]
+        }, [1, 2, 3, 4]
+
+    pearson_r_test_preferences = {
+        "row_1": [ 1, 2, 3, 4, 5 ],
+        "row_2": [ 2, 3, 4, 5, 6 ],
+        "row_3": [ 5, 4, 3, 2, 1 ],
+        "row_4": [ 3, 3, 3, 3, 3 ],
+        "row_5": [ 1, 2 ],
+        "row_6": [ 3, 1 ]}
+
+    dummy_line_tab_separated = "1\t2\t3\t4"
+    
+    dummy_line_colon_separated = "1::2::3::4"
+
+    dummy_line_invalid_separator = "1BAZ2BAZ3BAZ4"
+
+    dummy_line_invalid_values = "Should::NOT::be:Strings"
+
+    expected_tasting = {'author_id': 1, 'rating': 3, 'tasting_date': '1970-01-01 01:00:04', 'wine_id': 2}
+
+    expected_movielens_lines_colon = [ "1::5::9::0", "2::6::10::0", "3::7::11::0", "4::8::12::0" ]
+
+    expected_movielens_lines_tab = [ "1\t5\t9\t0", "2\t6\t10\t0", "3\t7\t11\t0", "4\t8\t12\t0" ]
+
+    dummy_matrix_a = [[1,1,1,1],[2,2,2,2],[3,3,3,3]]
+
+    dummy_matrix_b = [[1,1,1,1],[2,4,4,2],[3,3,3,1]]
+
+    dummy_matrix_c = [[0,2,0,2],[0,2,0,2],[2,2,2,2]]
+
+    expected_mae_a_b = ((0.0,1.0,0.5),0.5)
+
+    expected_mae_a_c = ((1.0,1.0,1.0),1.0)
+
+    def setUp(self):
+        mock_broker = MagicMock()
+        self.recommender = SommelierRecommenderBase(b=mock_broker)
+
+    def test_pearson_r(self):
+        # rows 1 and 2 have 100% positive correlation
+        self.assertEqual(1.0, self.recommender.pearson_r(self.pearson_r_test_preferences, 'row_1', 'row_2'))
+
+        # rows 1 and 3 have 100% negative correlation
+        self.assertEqual(-1.0, self.recommender.pearson_r(self.pearson_r_test_preferences, 'row_1', 'row_3'))
+
+        # row 4 has a standard deviation of 0, which we need to deal with to avoid a division by zero error
+        # when the covariance is divided by the product of the standard deviations
+        # in this case the method returns 0.0, on the basis that a user submitting the same rating for every 
+        # item is not expressing any preference at all, so a neutral similarity score is appropriate
+        self.assertEqual(0.0, self.recommender.pearson_r(self.pearson_r_test_preferences, 'row_1', 'row_4'))
+
+        # cases where there are two or less items for comparison are problematic for pearson_r; any two
+        # lists with 2 items will always result in either 1.0 or -1.0. That is not a useful score, as
+        # there may be no similarity in the ratings at all, so we return 0.0 if there are < 3 items
+        self.assertEqual(0.0, self.recommender.pearson_r(self.pearson_r_test_preferences, 'row_5', 'row_6'))
+
+    def test_preferences(self):
+        # preferences formatting for author rows / wine columns
+        self.assertEqual(self.expected_preferences_1, self.recommender.preferences(self.dummy_tastings, 'author_id', 'wine_id')) 
+
+        # preferences formatting for wine rows / author columns
+        self.assertEqual(self.expected_preferences_2, self.recommender.preferences(self.dummy_tastings, 'wine_id', 'author_id')) 
+    
+    # Movielens data can be encoded with either tabs or double colons (::), so test for both and neither...
+    def test_movielens_line_to_tasting(self):
+        self.assertEqual(self.expected_tasting, self.recommender.movielens_line_to_tasting(self.dummy_line_tab_separated))
+        self.assertEqual(self.expected_tasting, self.recommender.movielens_line_to_tasting(self.dummy_line_colon_separated))
+        self.assertRaises(Exception, lambda _: self.recommender.movielens_line_to_tasting(self.dummy_line_invalid_separator))
+        self.assertRaises(Exception, lambda _: self.recommender.movielens_line_to_tasting(self.dummy_line_invalid_values))
+
+    # tastings_to_movielens_format() should use double colon (::) separator by default
+    def test_tastings_to_movielens_format(self):
+        self.assertEqual(self.expected_movielens_lines_colon, self.recommender.tastings_to_movielens_format(self.dummy_tastings))
+        self.assertEqual(self.expected_movielens_lines_colon, self.recommender.tastings_to_movielens_format(self.dummy_tastings, separator="::"))
+        self.assertEqual(self.expected_movielens_lines_tab, self.recommender.tastings_to_movielens_format(self.dummy_tastings, separator="\t"))
+
+    def test_evaluate_matrices(self):
+        self.assertEquals(self.expected_mae_a_b, self.recommender.recsys_evaluate_matrices(self.dummy_matrix_a, self.dummy_matrix_b))
+        self.assertEquals(self.expected_mae_a_c, self.recommender.recsys_evaluate_matrices(self.dummy_matrix_a, self.dummy_matrix_c))
+
+#
+class PearsonCFRecommenderTest(unittest.TestCase):
+
+    def setUp(self):
+        mock_broker = MagicMock()
+        self.recommender = SommelierPearsonCFRecommender(b=mock_broker)
+
+    # test args for both sorted_rankings and sorted_similarities
+    # these consist of an id and a dict of user preferences of the format: { id: [ list, of, ratings ] }
+    # In this test data user 1 has 3 ratings in common with the others, the first three (0, 1 and 2). 
+    # Users 2, 3 and 4 have each rated the last two items (3 and 4), whereas user 1 has not.
+    # Items 3 and 4 have been given identical rankings by users 2, 3 and 4 ...
+    test_args = ( 1, { 1: [ 1, 2, 3, 0, 0 ], 2: [ 1, 2, 3, 3, 4 ], 3: [ 3, 2, 1, 3, 4 ], 4: [ 1, 2, 3, 3, 4 ] } )
+
+    # ... so the rankings should be 4.0 for item 4 and 3.0 for item 3, with item 4 first in the list
+    # as it has the higher rating
+    sorted_rankings_expected = [(4.0, 4), (3.0, 3)]
+
+    # covers recommender.sorted_rankings
+    def test_sorted_rankings(self):
+        self.assertEqual(self.sorted_rankings_expected, self.recommender.sorted_rankings(*self.test_args))
+
+    # We can use the same arguments from above to test the sorted_similarities() method
+    # this method will look at the pearson score for each of the users. The ratings in this
+    # case are loaded so that users 2 and 4 have identical ratings as 1, so will be recommended
+    # in that order. User 3 has inverse ratings to user 1, so they will score -1.0 and not
+    # be returned by the method
+    sorted_similarities_expected = [(2, 1.0), (4, 1.0)]
+
+    # covers recommender.sorted_similarities
+    def test_sorted_similarities(self):
+        self.assertEqual(self.sorted_similarities_expected, self.recommender.sorted_similarities(*self.test_args))
+
+class YeungMFRecommenderTest(unittest.TestCase):
+
+    dummy_tastings = [
+        { "author_id": 1, "wine_id": 1, "rating": 1 },
+        { "author_id": 2, "wine_id": 2, "rating": 2 },
+        { "author_id": 3, "wine_id": 3, "rating": 3 },
+        { "author_id": 4, "wine_id": 4, "rating": 4 }]
+
+    dummy_wine_ids = [
+        { 'id': 1 },
+        { 'id': 2 },
+        { 'id': 3 },
+        { 'id': 4 }]
+
+    expected_lists_matrix = [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 2.0, 0.0, 0.0],
+        [0.0, 0.0, 3.0, 0.0],
+        [0.0, 0.0, 0.0, 4.0]]
+
+    def setUp(self):
+        mock_broker = MagicMock()
+        mock_broker.get_tastings = MagicMock(return_value=self.dummy_tastings)
+        mock_broker.get_wine_ids = MagicMock(return_value=self.dummy_wine_ids)
+        self.recommender = SommelierYeungMFRecommender(b=mock_broker)
+ 
+    def test_generate_lists_ui_matrix(self):
+        generated_matrix, foo, bar = self.recommender.generate_lists_ui_matrix()
+        self.assertEqual(self.expected_lists_matrix, generated_matrix)
+
+\end{verbatim}
+
+\subsubsection{Broker Tests}
+
+\begin{verbatim}
+#!python
+import unittest
+from mock import Mock, MagicMock
+from brokers import SommelierBroker
+
+# Simple tests to make sure that the brokers call the db how we want them to, i.e.
+# using and templating their queries as we expect
+
+class BrokersTest(unittest.TestCase):
+
+    def setUp(self):
+        # instantiate broker for testing
+        self.sommelier_broker = SommelierBroker()
+        # create mock DB
+        db = MagicMock()
+        db.execute = MagicMock()
+        db.fetch_all = MagicMock()
+        db.fetch_one = MagicMock()
+        # inject mock db into broker
+        self.sommelier_broker.db = db
+ 
+    def test_get_authors(self):
+        authors = self.sommelier_broker.get_authors()
+        expected_query = self.sommelier_broker.authors_query
+        self.sommelier_broker.db.execute.asset_called_once_with(expected_query)
+        self.sommelier_broker.db.fetch_all.assert_called_once()
+    
+    def test_get_wines(self):
+        authors = self.sommelier_broker.get_wines()
+        expected_query = self.sommelier_broker.wines_query
+        self.sommelier_broker.db.execute.asset_called_once_with(expected_query)
+        self.sommelier_broker.db.fetch_all.assert_called_once()
+    
+    def test_get_wine_page(self):
+        page = self.sommelier_broker.get_wine_page(1)
+        expected_query = self.sommelier_broker.wine_page_query.format(50, 0)
+        self.sommelier_broker.db.execute.assert_called_once_with(expected_query)
+        self.sommelier_broker.db.fetch_all.assert_called_once_with()
+    
+    def test_get_wine_num_pages(self):
+        numpages = self.sommelier_broker.get_num_wine_pages()
+        expected_query = self.sommelier_broker.wine_count_query
+        self.sommelier_broker.db.execute.assert_called_once_with(expected_query)
+        self.sommelier_broker.db.fetch_one.assert_called_once_with()
+    
+    def test_get_wine(self):
+        wine = self.sommelier_broker.get_wine(123)
+        expected_query = self.sommelier_broker.wine_query.format(123)
+        self.sommelier_broker.db.execute.assert_called_once_with(expected_query)
+        self.sommelier_broker.db.fetch_one.assert_called_once_with()
+    
+    def test_get_author_ids(self):
+        ids = self.sommelier_broker.get_author_ids()
+        expected_query = self.sommelier_broker.author_ids_query
+        self.sommelier_broker.db.execute.assert_called_once_with(expected_query)
+        self.sommelier_broker.db.fetch_all.assert_called_once_with()
+
+    def test_get_author_page(self):
+        page = self.sommelier_broker.get_author_page(1)
+        expected_query = self.sommelier_broker.author_page_query.format(50, 0)
+        self.sommelier_broker.db.execute.assert_called_once_with(expected_query)
+        self.sommelier_broker.db.fetch_all.assert_called_once_with()
+    
+    def test_get_author_num_pages(self):
+        numpages = self.sommelier_broker.get_num_author_pages()
+        expected_query = self.sommelier_broker.author_count_query
+        self.sommelier_broker.db.execute.assert_called_once_with(expected_query)
+        self.sommelier_broker.db.fetch_one.assert_called_once_with()
+    
+    def test_get_author(self):
+        author = self.sommelier_broker.get_author(123)
+        expected_query = self.sommelier_broker.author_query.format(123)
+        self.sommelier_broker.db.execute.assert_called_once_with(expected_query)
+        self.sommelier_broker.db.fetch_one.assert_called_once_with()
+
+if __name__ == '__main__':
+    unittest.main()
+
+\end{verbatim}
+
+\subsection{MovieLens Test Runner}
+
+Script: eval\_train\_movielens.py
+
+\begin{verbatim}
+#!flask/bin/python
+from src.recommender import SommelierYeungMFRecommender, SommelierRecommender
+y = SommelierYeungMFRecommender()
+y.split_data_evaluate_movielens_file('ml-100k/u.data', [
+    {"steps":1,  "factors":10, "verbose":True},
+    {"steps":2,  "factors":10, "verbose":True},
+    {"steps":3,  "factors":10, "verbose":True},
+    {"steps":4,  "factors":10, "verbose":True},
+    {"steps":5,  "factors":10, "verbose":True},
+    {"steps":6,  "factors":10, "verbose":True},
+    {"steps":7,  "factors":10, "verbose":True},
+    {"steps":8,  "factors":10, "verbose":True},
+    {"steps":9,  "factors":10, "verbose":True},
+    {"steps":10,  "factors":10, "verbose":True},
+    {"steps":12,  "factors":10, "verbose":True},
+    {"steps":14,  "factors":10, "verbose":True},
+    {"steps":16,  "factors":10, "verbose":True},
+], percent_train=80)
+
+y.split_data_evaluate_movielens_file('ml-100k/u.data', [
+    {"steps":1,  "factors":10, "verbose":True},
+    {"steps":2,  "factors":10, "verbose":True},
+    {"steps":3,  "factors":10, "verbose":True},
+    {"steps":4,  "factors":10, "verbose":True},
+    {"steps":5,  "factors":10, "verbose":True},
+    {"steps":6,  "factors":10, "verbose":True},
+    {"steps":7,  "factors":10, "verbose":True},
+    {"steps":8,  "factors":10, "verbose":True},
+    {"steps":9,  "factors":10, "verbose":True},
+    {"steps":10,  "factors":10, "verbose":True},
+    {"steps":12,  "factors":10, "verbose":True},
+    {"steps":14,  "factors":10, "verbose":True},
+    {"steps":16,  "factors":10, "verbose":True},
+], percent_train=80)
+\end{verbatim}
 \normalsize

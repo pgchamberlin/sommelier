@@ -1,7 +1,14 @@
-\section{Review}\label{review}
-Review / reflections of the project on a personal level. What has been achieved? What were the problems, and how were they overcome?
+\section{Reflection}\label{review}
 
-Lessons learnt\ldots
- - Data cleanup very time consuming
- - Literature vast -> plural techniques for recommendation: very difficult to work out what strategy is best for given situation.
+I have mixed feelings about this project. On the one hand I implemented a functioning system which, in many ways, satisfied my original objectives: the API works reliably, with a response format I am happy with, the RESTful pattern employed in the API layer is good, and Flask helped make a success of the RESTful API - it was a good choice of framework. The architecture of the Sommelier system is fairly sound, and the system is capable of making recommendations.
+
+One the other hand, I am disappointed that I was not able to complete a better recommender. It may be that the ad-hoc matrix factorization-based recommender I built in imitation of Albert Yeung's work (Quuxlabs, Matrix Factorization: A Simple Tutorial and Implementation in Python, 2010 \cite{Yeung10}) is an excellent recommender, but I have only produced a single, small set of test results to suggest that that may be the case.
+
+My failure to satisfactorily architect the task of pre-imputing data for imputing ratings was a mistake. I should have planned an architecture around running such imputation tasks.Likewise, it was late in the project I introduced benchmarking of recommendation quality. I should have planned to do this from the beginning and prepared for it. The lack of foresight in this regard means I am unable to accurately the quality of the system's recommendations.
+
+Overall I feel a lack of up-front planning damaged my project. I should have spent more time analysing the practicalities of implementing systems using complex mathematical techniques such as matrix factorization. I may have had more success taking a less hands on approach to the mathematics of the recommendation and had more success implementing a library such like recsys-svd.
+
+Finally it is a disappointment that I did not produce a recommender that offers anything unique to the wine domain. In part I was hampered by poor quality source data, which took far longer to disentangle and migrate than I had anticipated it would, but had I planned better I would have had time to try to make something of the written tasting notes.
+
+Nevertheless I have learnt a great deal. Prior to this project I had written very little Python, never used Flask, and never attempted to implement a recommender system. Despite my mixed success in the latter I am pleased with my achievements in the former. What I have to show for my effort is, I hope, good in parts. If I were to do it all again I would do it differently, and hopefully better.
 

@@ -34,6 +34,10 @@ from broker import SommelierBroker
 # Abstract / base class to hold methods shared between all recommenders
 class SommelierRecommenderBase:
 
+
+    def __init__(self, b=SommelierBroker()):
+        self.broker = b
+
     def data_file_directory(self):
         return "".join([os.getcwd(), '/data/'])
 

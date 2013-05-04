@@ -28,13 +28,21 @@ class Sommelier():
 
     def index(self):
         return self.http_success_json({
+            'type': 'list', 
             'self': {
-                'title': 'Sommelier'
+                'title': 'Sommelier',
+                'link': '/'
             },
-            'links': {
-                'wines': '/wines/1',
-                'authors': '/authors/1',
-            }
+            'list': [
+                {
+                'title': 'All Wines',
+                'link': '/wines/1'
+                },
+                {
+                'title': 'All Authors',
+                'link': '/authors/1'
+                }
+            ]
         })
 
     def wine_page(self, page_num):
@@ -42,26 +50,61 @@ class Sommelier():
         if not records:
             return self.http_not_found_json()
         num_pages = self.broker.get_num_wine_pages()
+        wines_list = []
+        for wine in records:
+            wines_list.append({
+                'title': '{} {}'.format(wine['name'], wine['vintage']),
+                'link': '/wine/{}'.format(wine['id'])
+            })
         return self.http_success_json({
+            'type': 'list', 
             'self': {
-                'title': 'Wines page {}'.format(page_num),
-                'wines': records,
+                'title': 'Wines, Page {}'.format(page_num),
+                'link': '/wines/{}'.format(page_num)
             },
-            'next_page': '/wines/{}'.format(page_num + 1) if num_pages > page_num else 'none',
-            'previous_page': '/wines/{}'.format(page_num - 1) if page_num != 1 else 'none',
+            'list': wines_list
         })
 
     def wine(self, wine_id):
         record = self.broker.get_wine(wine_id)
         if not record:
             return self.http_not_found_json()
-        recommendations = self.recommender.wines_for_wine(wine_id)
+        tastings_list = []
+        for tasting in record['tastings']:
+            tastings_list.append({
+                'rating': tasting['rating'],
+                'notes': tasting['notes'],
+                'tasting_date': tasting['tasting_date'],
+                'author': {
+                    'title': tasting['author'],
+                    'link': '/author/{}'.format(tasting['author_id'])
+                }
+            })
+        wines = self.recommender.wines_for_wine(wine_id)
+        wines_list = []
+        for wine in wines:
+            wines_list.append({
+                'title': '{} {}'.format(wine['name'], wine['vintage']),
+                'link': '/wine/{}'.format(wine['id'])
+            })                
         return self.http_success_json({
+            'type': 'wine',
             'self': {
-                'title': 'Wine page: {} {}'.format(record['name'], record['vintage']),
-                'wine': record,
+                'title': '{} {}'.format(record['name'], record['vintage']),
+                'name': record['name'],
+                'vintage': record['vintage'],
+                'grape_variety': record['grape_variety'],
+                'appellation': record['appellation'],
+                'sub_region': record['sub_region'],
+                'region': record['region'],
+                'country': record['country'],
+                'producer': record['producer'],
+                'tastings': tastings_list,
+                'link': '/wine/{}'.format(record['id'])
             },
-            'recommendations': recommendations
+            'related_content': {
+                'similar_wines': wines_list
+            }
         })
     
     def author_page(self, page_num):
@@ -69,9 +112,19 @@ class Sommelier():
         if not records:
             return self.http_not_found_json()
         num_pages = self.broker.get_num_author_pages()
+        authors_list = []
+        for author in records:
+            authors_list.append({
+                'title': author['name'],
+                'link': '/author/{}'.format(author['id'])
+            })
         return self.http_success_json({
-            'authors': records, 
-            'num_pages': num_pages 
+            'type': 'list', 
+            'self': {
+                'title': 'Authors, Page {}'.format(page_num),
+                'link': '/authors/{}'.format(page_num)
+            },
+            'list': authors_list
         })
 
     def author(self, author_id):
@@ -79,13 +132,42 @@ class Sommelier():
         record = self.broker.get_author(author_id)
         if not record:
             return self.http_not_found_json()
+        tastings_list = []
+        for tasting in record['tastings']:
+            tastings_list.append({
+                'rating': tasting['rating'],
+                'notes': tasting['notes'],
+                'tasting_date': tasting['tasting_date'],
+                'wine': {
+                    'title': '{} {}'.format(tasting['wine'], tasting['vintage']),
+                    'link': '/wine/{}'.format(tasting['wine_id'])
+                }
+            })
         wines = self.recommender.wines_for_author(author_id)
+        wines_list = []
+        for wine in wines:
+            wines_list.append({
+                'title': '{} {}'.format(wine['name'], wine['vintage']),
+                'link': '/wine/{}'.format(wine['id'])
+            })                
         authors = self.recommender.authors_for_author(author_id)
+        authors_list = []
+        for author in authors:
+            authors_list.append({
+                'title': author['name'],
+                'link': '/author/{}'.format(author['id'])
+            })                
         return self.http_success_json({
-            'author': record,
-            'recommendations': {
-                'wines': wines,
-                'authors': authors
+            'type': 'author',
+            'self': {
+                'title': record['name'],
+                'name': record['name'],
+                'tastings': tastings_list,
+                'link': '/author/{}'.format(record['id'])
+            },
+            'related_content': {
+                'recommended_wines': wines_list,
+                'similar_authors': authors_list
             }
         })
 

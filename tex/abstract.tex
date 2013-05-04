@@ -4,10 +4,9 @@ results.
 \fi
 
 \begin{abstract}
-    Recommender systems are prevalent on the Web, and an important selling point for businesses such as Amazon and Netflix, who trade on the quality of their recommendations to users. Academic research, thanks partly to exceptional interest in the field precipitated by the Netflix Prize, has tended to concentrate research in the field of movie recommendations.
-    Service oriented architectures have grown in popularity on the Web in recent years. Such architectures lend themselves to scalability and maintainability, and in particular satisfy the needs of organizations who deliver the same data and content to diverse set of clients, such as websites and mobile apps.
-    In this project I implement a recommender system as a web service for wine recommendations. Using as a starting point the wines, authors and ratings data from wine website Decanter.com I implement a web API serving JSON data using the Python language, MySQL, the Flask framework, and a number of Python libraries.
+    In this project I implement a recommender system as a web service for wine recommendations. As a starting point the I use the wines, authors and ratings data from wine website Decanter.com, and implement a RESTful web API for accessing wine and author information, augmenting the results with recommendations for other wines or authors.
+    The system is written in the Python language, using a MySQL database. The API is built using the Flask framework.
     Implementing a primitive collaborative filtering system but finding my source data to be exceptionally sparse for recommendation, I explore and implement imputation techniques using matrix factorization and singular value decomposition in an attempt to boost the system's ability to make good recommendations.
-    I find that both matrix factorization and singular value decomposition significantly improve the recommendation quality of the system, but due to time contraints I am forced to leave some avenues of inquiry unexplored.
+    I find that both matrix factorization and singular value decomposition improve the recommendation quality of the system, but I am unable to satisfactorily test these systems.
 \end{abstract}
 

@@ -54,7 +54,7 @@ class SommelierBroker:
         LIMIT {} OFFSET {}
         """
     author_query  = """
-        SELECT a.*, t.*, w.name as wine FROM author a
+        SELECT a.*, t.*, w.name as wine, w.vintage FROM author a
         JOIN tasting t ON t.author_id = a.id
         JOIN wine w ON t.wine_id = w.id
         WHERE a.id = {}
@@ -132,6 +132,7 @@ class SommelierBroker:
         result = self.db.fetch_one()
         if result is None: return {}
         wine = {
+            'id': result['id'],
             'name': result['name'],
             'vintage': result['vintage'],
             'grape_variety': result['grape_variety'],
@@ -142,8 +143,9 @@ class SommelierBroker:
             'producer': result['producer'],
             'tastings': []
         }
-        if result['author'] is not None:
+        if result['rating'] is not None:
             wine['tastings'].append({
+                'author_id': result['author_id'],
                 'author': result['author'],
                 'notes': result['notes'],
                 'rating': result['rating'],
@@ -152,6 +154,7 @@ class SommelierBroker:
             results = self.db.fetch_all()
             for row in results:
                 wine['tastings'].append({
+                    'author_id': row['author_id'],
                     'author': row['author'],
                     'notes': row['notes'],
                     'rating': row['rating'],
@@ -189,19 +192,26 @@ class SommelierBroker:
         if result is None: return {}
         author = {
             'name': result['name'],
+            'id': result['author_id'],
             'tastings': []
         }
         if result['wine'] is not None:
             author['tastings'].append({
+                'wine_id': result['wine_id'],
                 'wine': result['wine'],
+                'vintage': result['vintage'],
                 'notes': result['notes'],
+                'tasting_date': result['tasting_date'],
                 'rating': result['rating']
             })
             results = self.db.fetch_all()
             for row in results:
                 author['tastings'].append({
+                    'wine_id': row['wine_id'],
                     'wine': row['wine'],
+                    'vintage': row['vintage'],
                     'notes': row['notes'],
+                    'tasting_date': row['tasting_date'],
                     'rating': row['rating']
                 })
         return author

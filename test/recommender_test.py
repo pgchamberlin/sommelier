@@ -3,7 +3,7 @@ import unittest
 from mock import Mock, MagicMock
 
 # import all our recommenders...
-from recommender import SommelierRecommender, SommelierPearsonCFRecommender, SommelierYeungMFRecommender, SommelierRecsysSVDRecommender
+from recommender import SommelierRecommenderBase, SommelierPearsonCFRecommender, SommelierYeungMFRecommender, SommelierRecsysSVDRecommender
 
 # Tests for the sommelier recommender class
 # This does not test some very small methods, such as
@@ -64,7 +64,7 @@ class RecommenderTest(unittest.TestCase):
 
     def setUp(self):
         mock_broker = MagicMock()
-        self.recommender = SommelierRecommender(b=mock_broker)
+        self.recommender = SommelierRecommenderBase(b=mock_broker)
 
     def test_pearson_r(self):
         # rows 1 and 2 have 100% positive correlation
@@ -170,6 +170,4 @@ class YeungMFRecommenderTest(unittest.TestCase):
     def test_generate_lists_ui_matrix(self):
         generated_matrix, foo, bar = self.recommender.generate_lists_ui_matrix()
         self.assertEqual(self.expected_lists_matrix, generated_matrix)
-
-# class RecsysSVDRecommenderTest(unittest.TestCase):
 

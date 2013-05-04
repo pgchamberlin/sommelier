@@ -7,11 +7,11 @@ Why the project was tackled in the chosen way, and why other ways were ruled out
 
 \subsection{Methodology}
 
-Given the exploratory nature of this project I elected to take an incremental and iterative approach, developing small parts of the system at any time (increments), and iterating over those parts with improvements as necessity dicated and time allowed. This approach is based on that laid out by Cockburn (2008 \cite{Cockburn08}).
+Given the exploratory nature of this project I elected to take an incremental and iterative approach, developing small parts of the system at any time (increments), and iterating over those parts with improvements as necessity dicated and time allowed. This approach is influenced by that laid out by Cockburn (2008 \cite{Cockburn08}).
 
 \subsubsection{Phases}
 
-The main phases of development would be:
+The main phases of development will be:
 
 \begin{enumerate}
     \item Clean up and migrate data
@@ -21,8 +21,6 @@ The main phases of development would be:
     \item Augment API routes for wines and authors with recommendations
     \item Iterate on recommendation methods, evaluating and improving quality
 \end{enumerate}
-
-My reason for taking this approach, rather than following a formal development methodology such as the waterfall model, was that my aims and objectives were unbounded, it the sense that there would not be a point at which my system was complete, only a point at which it was minimally complete, followed by a succession of points at which is was improved.
 
 \subsubsection{Minimum Viable Product}
 
@@ -46,36 +44,29 @@ These requirements in the least should be fulfilled by the system. With this hav
 As the main progamming language for my project I chose to use Python. There were several candidate languages, not least Java, but I decided on Python because it has a number of attributes which lent themselves particularly to this project:
 
 \begin{itemize}
-    \item Extensive mathematical and scientific libraries, such as numpy \cite{Numpy} and scipy \cite{Scipy}.
-    \item Extensive detailed documentation \cite{PythonDocs}.
-    \item Widely used in web development, such as by Google and YouTube \cite{PythonQuotes}.
-    \item Interactive interpreter, allowing command line interaction and supporting scripting on Unix-like systems \cite{PythonInterpreter}.
+    \item Extensive mathematical and scientific libraries, such as NumPy (NumPy, 2013 \cite{Numpy}) and SciPy (SciPy, 2013 \cite{Scipy}).
+    \item Extensive detailed documentation (Python Documentation, 2013 \cite{PythonDocs}).
+    \item Widely used in web development, such as by Google and YouTube (Python Quotes, 2013 \cite{PythonQuotes}).
+    \item Interactive interpreter, allowing command line interaction and supporting scripting on Unix-like systems (Python, Interpreter, 2013 \cite{PythonInterpreter}).
 \end{itemize}
 
 One deciding factor was that my first enquiry into recommender systems was reading Segaran's code examples in Chapter 2 of Collective Intelligence (2007, Ch.2 \cite{Segaran07}), where the language he uses for his code examples is Python. 
 
-In addition to its suitability for tasks around recommender systems, Python has a solid heritage of web application frameworks, such as Django \cite{DjangoProject} and Flask \cite{Flask}. Django is a fully featured website building framework, and as such carries many features unnecessary for my project, whereas Flask, a ``micro-framework'' \cite{Flask}, appeared to be more lightweight and simple to implement. Therefore I chose to implement my API using Flask \cite{Flask}.
+In addition to its suitability for tasks around recommender systems, Python has a solid heritage of web application frameworks, such as Django (Django Project, 2013 \cite{DjangoProject}) and Flask (Flask, 2013 \cite{Flask}). Django is a fully featured website building framework, and as such carries many features unnecessary for my project, whereas Flask, a ``micro-framework'' (Flask, 2013 \cite{Flask}), appeared to be more lightweight and simple to implement. Therefore I chose to implement my API using Flask.
 
-For the most part I considered that my system would suit the stateless, non-persistent nature of a Python web application. The only concern in this regard would be that I would need to recreate objects in memory from scratch with each request rather than persist them as I might using another language, such as using Java with the JPA\cite{JavaJPA}. It was reasonable to suppose that in generating recommendations I would potentially be creating large objects in memory, and that there may be a performance deficit incurred by having to rebuild such object on a per request basis. I resolved that should the lack of persistence prove problematic down the line I would be able to use a persistence mechanism such as Memcached \cite{PythonMemcached} to serve this purpose, and found that there is wide support for such a solution using Python and Flask \cite{FlaskMemcached}.
+For the most part I considered that my system would suit the stateless, non-persistent nature of a Python web application. The only concern in this regard would be that I would need to recreate objects in memory from scratch with each request rather than persist them as I might using another language, such as using Java with the JPA (Java EE 6 Tutorial, The JPA \cite{JavaJPA}). It was reasonable to suppose that in generating recommendations I would potentially be creating large objects in memory, and that there may be a performance deficit incurred by having to rebuild such objects on a per request basis. I resolved that should the lack of persistence prove problematic down the line I would be able to use a persistence mechanism such as Memcached (Python-Memcached, 2013 \cite{PythonMemcached}) to serve this purpose, and found that there is wide support for such a solution using Python and Flask (Flask Documentation: Caching, 2013 \cite{FlaskMemcached}).
 
 \subsubsection{MySQL}
 
-Originally I had envisaged a system backed by a PostgreSQL \cite{PostgreSQL} RDBMS, but having received the Decanter.com data as a MySQL \cite{MySQL} database it did not seem, comparing the two systems, that there would be any significant benefit migrating the data to PostgreSQL. Both are widely used in production, and have similar feature sets. For a short time I considered using a NoSQL database such as MongoDB \cite{MongoDB} for my project, but decided against such a solution, recognising that such document-oriented systems are not ideal when joining between tables in the way that I would need to for my wines and tasting notes. It seemed that an RDBMS was ideally suited to the purpose, and there was no reason why that shouldn't be MySQL.
+Originally I had envisaged a system backed by a PostgreSQL (PostgreSQL, 2013 \cite{PostgreSQL}) RDBMS, but having received the Decanter.com data as a MySQL (MySQL, 2013 \cite{MySQL}) database it did not seem, comparing the two systems, that there would be any significant benefit migrating the data to PostgreSQL. Both are widely used in production, and have similar feature sets. For a short time I considered using a NoSQL database such as MongoDB (MongoDB, 2013 \cite{MongoDB}) for my project, but decided against such a solution, recognising that such document-oriented systems are not ideal when joining between tables in the way that I would need to for my wines and tasting notes. It seemed that an RDBMS was ideally suited to the purpose, and there was no reason why that shouldn't be MySQL.
 
 \subsubsection{GitHub}
 
-Given the iterative nature of my development process I envisaged a need to be able to easily version my source code, possibly running several different versions at once, with the ability to revert changes back to any previous state. I also wanted a remote backup of my system in case of problems with my own development computer. In order to do be able to do these things I chose to store my code as a project in GitHub \cite{GitHub}, which is a web service providing Git version control. I chose to use GitHub for my notes and project files also, so that my entire project was stored, versioned and backed up together.
+Given the iterative nature of my development process I envisaged a need to be able to easily version my source code, possibly running several different versions at once, with the ability to revert changes back to any previous state. I also wanted a remote backup of my system in case of problems with my own development computer. In order to do be able to do these things I chose to store my code as a project in GitHub (GitHub, 2013 \cite{GitHub}), which is a web service providing Git version control. I chose to use GitHub for my notes and project files also, so that my entire project was stored, versioned and backed up together.
 
 \subsection{Approach to Recommendations}
 
-Wine attributes, vintage, grape variety, region etc., are of limited use for making recommendations. Take a user who has rated a red Bordeaux wine highly. It is not interesting to that user for a system to simply recommend them other highly-rated red Bordeaux wines, which is what a system will do if it looks for items with similar attributes. It is likely that any drinker who enjoys Bordeaux wines will recognise that such wines are of a type, with geography, grape varieties and production processes in common. Thus the user will be capable of ``recommending'' Bordeaux wines to themselves, and will not have very much difficulty sourcing ones which are highly rated. They do not need a recommender system for that.
+Wines are considered to be highly specific items. Even though properties such as region or grape variety might be the same between two wines, they may be significantly different to one other. For this reason it is very difficult to conceive of a recommender system for wines based on content attributes that would not be stuck recommending items in the near neighbourhood of their subject. In such a system a user that likes one Chianti might simply be recommended more Chiantis, because they all have the same region and grape variety, roughly the same alcohol, similar residual sugar etc..
 
-It is recommendations in spite of the attributes of the subject item that are of real interest. Recommending a Syrah from Chile's Colchagua Valley to someone who rated a red Bordeaux wine highly might be of more interest. It is relatively more likely that a user is unaware of the fine Syrah wines from that region, and that makes it a much more interesting recommendation; potentially a good one.
+In that respect wines are very much like movies. Just because a user likes one comedy film, it doesn't mean they will like all comedy films. What may give wines the edge over movies is the lexicon of their tasting notes. It would be interesting to see if wine tasting notes could be used to aid interesting recommendations. Primarily though, I will seek to apply collaborative-filtering techniques to the recommendation of wines in the Decanter.com database, pursuing data imputation techniques to predict ratings for users on wines.
 
-Similarly a recommendation of another Bordeaux red wine might be good, as long as it were possible to establish a commonality of appeal for that particular drinker other than that the wine is similar in attributes. For example there are many delicious Pauillacs from 2005, made of the same grape varieties in the same manner; finding the one which is most interesting to a given user is not aided by looking at its grape variety or appellation as they are identical. The appeal and interest of a wine recommendation lies in qualities beyond the item's attribute profile.
-
-So, by disregarding the attributes of the wines it may be possible to make more interesting recommendations.
-
-A corrollary benefit of this disregard for wine attributes is that I am able to make use of far more of the Decanter.com data, many of the wines within which have incomplete attributes.
-
-\ldots

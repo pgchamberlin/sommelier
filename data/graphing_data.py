@@ -135,4 +135,88 @@ times_k15=[t250_15, t500_15, t750_15, t1000_15, t1250_15, t1500_15, t1750_15, t2
 # pp.plot(steps, total_error, 'bo', spline_x, spline, 'k')
 # p.show()
 
+### Tests with Movielens data with split train/test 80/20
+movielens_mean_errors=[1.219,1.085,1.011,0.953,0.919,0.898,0.871,0.852,0.844,0.835,0.815,0.809,0.803]
+movielens_x_axis=[1,2,3,4,5,6,7,8,9,10,12,14,16]
+# Derived from:
+"""
+Iterations: 1
+Mean total error: 1.27495915695
+NMAE 0.243709938091
+MAE 1.21854969046
+Total SD 0.807146170376
+
+Iterations: 2
+Mean total error: 1.16635229692
+NMAE 0.217014733893
+MAE 1.08507366947
+Total SD 0.747216862066
+
+Iterations: 3
+Mean total error: 1.08332820042
+NMAE 0.202232649571
+MAE 1.01116324786
+Total SD 0.707522668304
+
+Iterations: 4
+Mean total error: 1.03503038282
+NMAE 0.190701581031
+MAE 0.953507905157
+Total SD 0.681899619691
+
+Iterations: 5
+Mean total error: 0.992339562036
+NMAE 0.183832456185
+MAE 0.919162280927
+Total SD 0.665780714196
+
+Iterations: 6
+Mean total error: 0.968343479321
+NMAE 0.179652109306
+MAE 0.898260546532
+Total SD 0.661623460939
+
+Iterations: 7
+Mean total error: 0.938567322375
+NMAE 0.174144261469
+MAE 0.870721307347
+Total SD 0.65156088896
+
+Iterations: 8
+Mean total error: 0.914137444327
+NMAE 0.170426460021
+MAE 0.852132300105
+Total SD 0.640797601086
+
+Iterations: 9
+Mean total error: 0.902820787911
+NMAE 0.168766699083
+MAE 0.843833495417
+Total SD 0.633170274961
+
+Iterations: 10
+Mean total error: 0.884207203606
+NMAE 0.166962671072
+MAE 0.834813355358
+Total SD 0.628167100288
+
+Iterations: 12
+Mean total error: 0.855475162248
+NMAE 0.163065122286
+MAE 0.815325611432
+Total SD 0.621724194017
+
+Iterations: 14
+Mean total error: 0.848800793213
+NMAE 0.161838953963
+MAE 0.809194769816
+Total SD 0.617847691226
+Author SDs {1: 0.67013
+
+Iterations: 16
+Mean total error: 0.834450199364
+NMAE 0.160566408988
+MAE 0.802832044942
+Total SD 0.613868334184
+"""
 

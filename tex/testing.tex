@@ -1,4 +1,53 @@
 \section{Testing and Evaluation}\label{testing}
-How well does the system work? Details of testing and evaluation of the system\ldots
 
+\subsection{Testing the Code}
+
+\subsubsection{Unit Tests}
+
+For the main components of the system I have produced unit tests (see Appendix \ref{app:unittests}) which are written using Python's standard, JUniti-inspired test framework, unittest (unittest framework, 2013 \cite{PythonUnittest}). These tests cover the classes Sommelier, SommelierBroker, SommelierRecommenderBase, and various parts of recommender classes SommelierPearsonCFRecommender and SommelierYeungMFRecommender.
+
+In each case I have attempted to ensure that I test key units of work, using the python's mock library to factor out dependencies. This way the unit tests for one class will not fail because of a problem in another class, making maintanance of both the tests and the application code easier.
+
+I have used the nose module as a test runner (Testing with nose, 2013 \cite{ReadthedocsNose}), which automatically locates and executes test files with the project. Automatically discovering and running all tests with nose is trivial:
+
+\footnotesize
+\begin{verbatim}
+cd /path/to/sommelier
+./flask/bin/nosetests
+\end{verbatim}
+\normalsize
+
+\subsubsection{Functional Testing}
+
+\begin{figure}[h!]
+    \caption{Testing the Sommelier API using Postman}
+    \centering
+        \includegraphics[width=15cm]{Postman}
+    \label{fig:postman}
+\end{figure}
+
+I have not implemented any automated functional testing, instead relying on manual testing to ensure that the API functions as it should. For this purpose I have used Postman (Postman website, 2013 \cite{Postman}), which is an extension for the Google Chrome web browser (Chrome Extension \cite{ChromePostman}) designed as a testing client for REST APIs. Figure \ref{fig:postman} shows the interface for Postman in Google Chrome.
+
+\subsection{Testing Recommendations}
+
+\begin{figure}[h!]
+    \caption{Testing the SommelierYeungMFRecommender with Movielens Data}
+    \centering
+        \includegraphics[width=15cm]{MAE_Yeung_ML100k}
+    \label{fig:movielenstest}
+\end{figure}
+
+When I came to test my recommendations, the most developed recommender implementation in my system was the SommelierYeungMFRecommender, based on a matrix factorization algorithm published on a blog by Albert Yeung (Quuxlabs, Matrix Factorization: A Simple Tutorial and Implementation in Python, 2010 \cite{Yeung10}). This system imputes a matrix of predicted values by using a gradient descent algorithm to iteratively improved its similarity to the original data.
+
+Testing recommendations made by the system has been challenging. Of the three metrics put forward by Shani and Gunawardana (2011 \cite{Shani11}) that I raised in the literature review: prediction accuracy, item-space coverage and user-space coverage, I was only succesful in attempting to test one: prediction accuracy.
+
+The metric I prefered for the purpose of evaluation was Mean Absolute Error (MAE), which is a commonly used measure (Su and Khoshgoftaar, 2009 \cite{Su09}).
+
+I wrote a method, split\_data\_evaluation(), in the class SommelierYeungMFRecommender. This splits the tastings into two sets according to a percentage split, one for testing and one for training. The training data used to impute a matrix of predicted ratings, including ratings for items in the test set which are unseen by the system. Once the imputation is complete the predicted ratings are compared with the true ratings in the test set and the MAE is calculated, along with the standard deviation of the error (see Appendix \ref{app:yeungmf}).
+
+I did not have a great deal of time to carry out my tests, having estimated a week for this task. Unfortunately I underestimated the time cost of running many iterations of a computationally intensive process, finding that each iteration of tests and improvements took several hours. By the time I had a satisfactory testing system there was no more development time left available.
+
+I did produce one good set of data supporting the effectiveness of Yeung's algorithm for collaborative filtering, which was conducted using test data from the Movielens 100k data set (GroupLens, MovieLens Data Sets, 2011 \cite{MovielensDatasets}). Figure \ref{fig:movielenstest} shows Yeung's algorithm successfully reducing the MAE of the MovieLens data as iterations increase. When casually compared (they are not directly comparable) to the MAE results reported by Su and Khoshgoftaar (Su and Khoshgoftaar, 2006 \cite{Su06}), where the best MAE was 0.769 for the tests they undertook, the MAE of just over 0.8 for the SommelierYeungMFRecommender over 16 iterations looks quite promising. To gather this data I implemented the function split\_data\_evaluate\_movielens\_file() on the SommelierYeungMFRecommender class.
+
+I did not satisfactorily test the system against the Decanter.com database. The sparsity of that data does not necessarily preclude successful results, but it was not until late in the project that I recognised the correct way to evaluate the system. I already spent a certain amount of effort testing the Decanter.com data in an invalid manner. Implementing the train/test system with the MovieLens data was the last thing I had time to do, unfortunately. A few more days would have seen the results for the Decanter.com data.
 
